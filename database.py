@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
+from urllib.parse import quote_plus
 import uuid
 import streamlit as st
 
@@ -84,12 +85,58 @@ class DatabaseManager:
         if not self.database_url:
             raise ValueError("DATABASE_URL environment variable not set")
         
+        # Fix URL encoding issues for passwords with special characters
+        self.database_url = self._fix_connection_url(self.database_url)
+        
         # Create engine and session
         self.engine = create_engine(self.database_url)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         
         # Create tables
         self.create_tables()
+    
+    def _fix_connection_url(self, url):
+        """Fix URL encoding issues in database connection string"""
+        try:
+            # Check if the URL has the malformed pattern with double @
+            if 'Aipass@12@aws' in url:
+                # Reconstruct the URL with proper encoding
+                parts = url.split('://')
+                protocol = parts[0]
+                rest = parts[1]
+                
+                # Split into user:pass@host:port/db
+                auth_and_host = rest.split('/')
+                database = auth_and_host[-1] if len(auth_and_host) > 1 else 'postgres'
+                auth_host = auth_and_host[0]
+                
+                # Split auth from host
+                auth_parts = auth_host.split('@')
+                if len(auth_parts) >= 3:  # This indicates the double @ issue
+                    user_pass = '@'.join(auth_parts[:-2])  # Join all but last 2 parts
+                    host_port = '@'.join(auth_parts[-2:])  # Last 2 parts are host:port
+                    
+                    # Extract user and password
+                    if ':' in user_pass:
+                        user, password = user_pass.split(':', 1)
+                        # URL encode the password
+                        encoded_password = quote_plus(password)
+                        
+                        # Reconstruct the URL
+                        fixed_url = f"{protocol}://{user}:{encoded_password}@{host_port}/{database}"
+                        
+                        # Add SSL mode if not present
+                        if 'sslmode' not in fixed_url:
+                            fixed_url += '?sslmode=require'
+                            
+                        return fixed_url
+            
+            # If no issues detected, return original URL
+            return url
+            
+        except Exception as e:
+            # If anything goes wrong, return original URL
+            return url
     
     def create_tables(self):
         """Create database tables if they don't exist"""
