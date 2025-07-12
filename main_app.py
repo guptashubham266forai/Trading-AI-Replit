@@ -14,6 +14,8 @@ from stock_screener import StockScreener
 from crypto_screener import CryptoScreener
 from predictive_analysis import PredictiveAnalysis
 from swing_strategies import SwingTradingStrategies
+from database import DatabaseManager
+from performance_analyzer import PerformanceAnalyzer
 from utils import format_currency, calculate_risk_reward
 
 # Page configuration
@@ -69,6 +71,22 @@ def initialize_session_state():
     # Predictor
     if 'predictor' not in st.session_state:
         st.session_state.predictor = PredictiveAnalysis()
+    
+    # Database and Performance
+    if 'db_manager' not in st.session_state:
+        try:
+            st.session_state.db_manager = DatabaseManager()
+            st.session_state.db_connected = True
+        except Exception as e:
+            # Silently fail and continue without database
+            st.session_state.db_manager = None
+            st.session_state.db_connected = False
+    
+    if 'performance_analyzer' not in st.session_state:
+        if st.session_state.get('db_connected', False):
+            st.session_state.performance_analyzer = PerformanceAnalyzer()
+        else:
+            st.session_state.performance_analyzer = None
 
 def get_current_data_fetcher():
     """Get the appropriate data fetcher based on selected market"""
@@ -491,13 +509,24 @@ def update_market_data():
                     # Generate signals
                     signals = strategies.generate_signals(data_with_indicators, symbol)
                     
-                    # Add new signals
+                    # Add new signals and save to database
                     for signal in signals:
                         if not any(s['symbol'] == signal['symbol'] and 
                                  s['timestamp'] == signal['timestamp'] and
                                  s['action'] == signal['action'] 
                                  for s in st.session_state[signals_key]):
                             st.session_state[signals_key].append(signal)
+                            
+                            # Save to database if connected
+                            if st.session_state.get('db_connected', False) and st.session_state.db_manager:
+                                try:
+                                    signal_data = signal.copy()
+                                    signal_data['market_type'] = st.session_state.market_type
+                                    signal_data['trading_style'] = st.session_state.trading_style
+                                    st.session_state.db_manager.save_signal(signal_data)
+                                except Exception as e:
+                                    # Silently continue without database
+                                    pass
             except Exception as e:
                 continue
         
@@ -595,11 +624,12 @@ def main():
     )
     
     # Main content tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Market Overview", 
         "🎯 Trading Signals", 
         "🔮 Predictions", 
-        "📈 Detailed Analysis"
+        "📈 Detailed Analysis",
+        "📊 Performance"
     ])
     
     with tab1:
@@ -717,6 +747,135 @@ def main():
         else:
             st.info("No data available. Please wait for data to load.")
     
+    with tab5:
+        # Performance Analysis Tab
+        if not st.session_state.get('db_connected', False):
+            st.warning("📊 Performance tracking requires database connection.")
+            st.info("""
+            **To enable performance tracking:**
+            1. Set up a Supabase account at https://supabase.com
+            2. Create a new project 
+            3. Go to Settings > Database
+            4. Copy the connection string and add it as DATABASE_URL in Secrets
+            5. Restart the application
+            
+            **For now, you can still use all trading features without performance tracking.**
+            """)
+            return
+        
+        st.header("📊 Trading Performance Analysis")
+        
+        # Performance controls
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            performance_market = st.selectbox(
+                "Market Filter",
+                ["All", "Stocks", "Crypto"],
+                key="perf_market"
+            )
+            market_filter = None if performance_market == "All" else performance_market.lower()
+        
+        with col2:
+            performance_style = st.selectbox(
+                "Trading Style Filter",
+                ["All", "Intraday", "Swing"],
+                key="perf_style"
+            )
+            style_filter = None if performance_style == "All" else performance_style.lower()
+        
+        with col3:
+            days_back = st.selectbox(
+                "Time Period",
+                [7, 14, 30, 60, 90],
+                index=2,
+                key="perf_days"
+            )
+        
+        with col4:
+            if st.button("🔄 Update Performance Data", key="update_perf"):
+                with st.spinner("Updating performance data..."):
+                    data_fetcher = get_current_data_fetcher()
+                    crypto_fetcher = st.session_state.crypto_data_fetcher
+                    
+                    updates = st.session_state.performance_analyzer.update_signal_performance(
+                        data_fetcher, crypto_fetcher
+                    )
+                    st.success(f"Updated {updates} signals")
+        
+        # Performance sections
+        perf_tab1, perf_tab2, perf_tab3, perf_tab4 = st.tabs([
+            "📈 Overview", "📋 Trade History", "📊 Charts", "🏆 Strategy Analysis"
+        ])
+        
+        with perf_tab1:
+            st.session_state.performance_analyzer.display_performance_overview(
+                market_filter, style_filter, days_back
+            )
+        
+        with perf_tab2:
+            st.session_state.performance_analyzer.display_trade_history(
+                market_filter, style_filter, days_back
+            )
+            
+            # Export option
+            st.session_state.performance_analyzer.export_performance_report(
+                market_filter, style_filter, days_back
+            )
+        
+        with perf_tab3:
+            st.session_state.performance_analyzer.display_performance_charts(
+                market_filter, style_filter, days_back
+            )
+        
+        with perf_tab4:
+            st.session_state.performance_analyzer.display_strategy_comparison(
+                market_filter, style_filter, days_back
+            )
+            
+            # Performance insights
+            st.subheader("💡 Performance Insights")
+            
+            metrics = st.session_state.db_manager.get_performance_metrics(
+                market_filter, style_filter, days_back
+            )
+            
+            if metrics and metrics['total_trades'] > 0:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.info("📊 **Key Observations:**")
+                    
+                    if metrics['win_rate'] >= 60:
+                        st.success("✅ Strong win rate - Strategy is working well")
+                    elif metrics['win_rate'] >= 50:
+                        st.warning("⚠️ Moderate win rate - Room for improvement")
+                    else:
+                        st.error("❌ Low win rate - Review and optimize strategies")
+                    
+                    if metrics['profit_factor'] >= 2.0:
+                        st.success("✅ Excellent profit factor - Profitable system")
+                    elif metrics['profit_factor'] >= 1.5:
+                        st.warning("⚠️ Good profit factor - Solid performance")
+                    else:
+                        st.error("❌ Low profit factor - Losses outweigh gains")
+                
+                with col2:
+                    st.info("🎯 **Recommendations:**")
+                    
+                    if metrics['avg_loss'] and abs(metrics['avg_loss']) > metrics['avg_win']:
+                        st.warning("💡 Consider tighter stop losses to reduce average loss")
+                    
+                    if metrics['win_rate'] < 50:
+                        st.warning("💡 Review entry criteria and market timing")
+                    
+                    if metrics['max_drawdown'] < -1000:
+                        st.warning("💡 Consider reducing position sizes during drawdowns")
+                    
+                    st.success("💡 Continue tracking performance to identify patterns")
+            else:
+                st.info("No performance data available yet. Start trading to see results!")
+    
     # Status and controls
     st.sidebar.markdown("---")
     st.sidebar.header("📊 System Status")
@@ -739,6 +898,12 @@ def main():
     
     st.sidebar.info(f"Tracking {data_count} instruments")
     st.sidebar.info(f"Active signals: {signals_count}")
+    
+    # Database status
+    if st.session_state.get('db_connected', False):
+        st.sidebar.success("🟢 Database: Connected")
+    else:
+        st.sidebar.warning("🟡 Database: Offline")
     
     # Market status
     if st.session_state.market_type == 'crypto':

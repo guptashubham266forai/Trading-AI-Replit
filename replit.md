@@ -116,6 +116,26 @@ Preferred communication style: Simple, everyday language.
   - Dynamic risk management parameters
 - **Architecture**: Single application managing multiple trading approaches and market types
 
+### 13. Database Management (`database.py`)
+- **Purpose**: PostgreSQL database integration for signal tracking and performance analysis
+- **Features**: 
+  - Trading signal storage with full metadata
+  - Portfolio performance tracking with daily metrics
+  - P&L calculation and risk metrics
+  - Signal execution and closing tracking
+- **Models**: TradingSignal, PortfolioPerformance tables with comprehensive fields
+
+### 14. Performance Analyzer (`performance_analyzer.py`)
+- **Purpose**: Comprehensive trading performance analysis and reporting
+- **Features**: 
+  - Individual trade performance tracking with P&L calculation
+  - Portfolio growth analysis with cumulative returns
+  - Strategy comparison and ranking by profitability
+  - Risk metrics including drawdown and Sharpe ratio
+  - Performance visualization with interactive charts
+  - CSV export functionality for detailed reporting
+- **Metrics**: Win rate, profit factor, expectancy, max drawdown, strategy performance
+
 ## Data Flow
 
 1. **Data Acquisition**: DataFetcher retrieves real-time NSE stock prices via yfinance
