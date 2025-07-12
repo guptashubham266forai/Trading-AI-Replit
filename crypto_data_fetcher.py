@@ -14,9 +14,9 @@ class CryptoDataFetcher:
         self.crypto_symbols = [
             'BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD',
             'SOL-USD', 'DOGE-USD', 'DOT-USD', 'AVAX-USD', 'SHIB-USD',
-            'MATIC-USD', 'LTC-USD', 'UNI-USD', 'LINK-USD', 'ALGO-USD',
-            'BCH-USD', 'XLM-USD', 'VET-USD', 'FIL-USD', 'TRX-USD',
-            'ETC-USD', 'THETA-USD', 'AAVE-USD', 'ATOM-USD', 'XTZ-USD'
+            'LTC-USD', 'LINK-USD', 'ALGO-USD', 'BCH-USD', 'XLM-USD',
+            'VET-USD', 'FIL-USD', 'TRX-USD', 'ETC-USD', 'THETA-USD',
+            'AAVE-USD', 'ATOM-USD', 'XTZ-USD', 'NEAR-USD', 'APT-USD'
         ]
         
         # Alternative symbols for popular crypto pairs
@@ -30,7 +30,7 @@ class CryptoDataFetcher:
             'DOGE-USD': 'Dogecoin',
             'DOT-USD': 'Polkadot',
             'AVAX-USD': 'Avalanche',
-            'MATIC-USD': 'Polygon'
+            'NEAR-USD': 'Near Protocol'
         }
         
         self.cache = {}
