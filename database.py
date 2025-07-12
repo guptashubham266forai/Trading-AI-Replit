@@ -98,38 +98,48 @@ class DatabaseManager:
     def _fix_connection_url(self, url):
         """Fix URL encoding issues in database connection string"""
         try:
-            # Check if the URL has the malformed pattern with double @
+            # Check if this is a Supabase connection with the specific issue
             if 'Aipass@12@aws' in url:
-                # Reconstruct the URL with proper encoding
+                # Build the correct URL from known components
+                user = 'postgres.jnvtzqhcznmtspojahec'
+                password = 'Aipass@12'
+                encoded_password = quote_plus(password)  # This becomes Aipass%4012
+                host = 'aws-0-ap-southeast-1.pooler.supabase.com'
+                port = '6543'
+                database = 'postgres'
+                
+                # Construct the proper URL
+                fixed_url = f"postgresql://{user}:{encoded_password}@{host}:{port}/{database}?sslmode=require"
+                return fixed_url
+            
+            # For other cases, try to parse and fix
+            if '@' in url and url.count('@') > 1:
+                # Multiple @ symbols detected, likely password encoding issue
                 parts = url.split('://')
-                protocol = parts[0]
-                rest = parts[1]
-                
-                # Split into user:pass@host:port/db
-                auth_and_host = rest.split('/')
-                database = auth_and_host[-1] if len(auth_and_host) > 1 else 'postgres'
-                auth_host = auth_and_host[0]
-                
-                # Split auth from host
-                auth_parts = auth_host.split('@')
-                if len(auth_parts) >= 3:  # This indicates the double @ issue
-                    user_pass = '@'.join(auth_parts[:-2])  # Join all but last 2 parts
-                    host_port = '@'.join(auth_parts[-2:])  # Last 2 parts are host:port
+                if len(parts) == 2:
+                    protocol = parts[0]
+                    rest = parts[1]
                     
-                    # Extract user and password
-                    if ':' in user_pass:
-                        user, password = user_pass.split(':', 1)
-                        # URL encode the password
-                        encoded_password = quote_plus(password)
+                    # Find the last @ which should be before hostname
+                    last_at = rest.rfind('@')
+                    if last_at > 0:
+                        auth_part = rest[:last_at]
+                        host_part = rest[last_at+1:]
                         
-                        # Reconstruct the URL
-                        fixed_url = f"{protocol}://{user}:{encoded_password}@{host_port}/{database}"
-                        
-                        # Add SSL mode if not present
-                        if 'sslmode' not in fixed_url:
-                            fixed_url += '?sslmode=require'
+                        # Split auth into user:password
+                        if ':' in auth_part:
+                            user, password = auth_part.split(':', 1)
+                            encoded_password = quote_plus(password)
+                            fixed_url = f"{protocol}://{user}:{encoded_password}@{host_part}"
                             
-                        return fixed_url
+                            # Add SSL if not present and this is Supabase
+                            if 'supabase.com' in fixed_url and 'sslmode' not in fixed_url:
+                                if '?' in fixed_url:
+                                    fixed_url += '&sslmode=require'
+                                else:
+                                    fixed_url += '?sslmode=require'
+                            
+                            return fixed_url
             
             # If no issues detected, return original URL
             return url
