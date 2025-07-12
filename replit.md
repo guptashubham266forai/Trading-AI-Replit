@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a comprehensive real-time trading analysis application built with Streamlit that supports both NSE stocks and cryptocurrencies. The system provides live market data, technical analysis, trading signals, predictive analysis, and screening capabilities for intraday and swing trading strategies.
+This is a comprehensive real-time trading analysis application built with Streamlit that supports both NSE stocks and cryptocurrencies. The unified platform provides live market data, technical analysis, trading signals, predictive analysis, and screening capabilities for both intraday and swing trading strategies. Users can switch between Indian stock market (NSE) and cryptocurrency markets, and choose between intraday (minutes to hours) or swing trading (days to weeks) approaches.
 
 ## User Preferences
 
@@ -94,6 +94,27 @@ Preferred communication style: Simple, everyday language.
   - Momentum divergence analysis
   - Accumulation/distribution pattern recognition
 - **Timeframe**: 30 minutes to 2 hours advance warning before major moves
+
+### 11. Swing Trading Strategies (`swing_strategies.py`)
+- **Purpose**: Professional swing trading strategies for multi-day to multi-week positions
+- **Features**: 
+  - Advanced trend following with pullback entries
+  - Mean reversion using Bollinger Bands and multi-timeframe RSI
+  - Breakout detection with volume confirmation and volatility compression
+  - Support/resistance level trading with pivot points
+  - Pattern recognition (double tops/bottoms, cup and handle)
+  - Volume analysis with OBV and institutional flow detection
+- **Risk Management**: Higher risk tolerance (3%) and reward ratios (3:1) optimized for swing trades
+
+### 12. Main Unified Application (`main_app.py`)
+- **Purpose**: Unified Streamlit interface combining all trading approaches
+- **Features**: 
+  - Market selection (NSE stocks vs cryptocurrencies)
+  - Trading style selection (intraday vs swing trading)
+  - Adaptive strategy configuration based on selected approach
+  - Universal charting with style-specific indicators
+  - Dynamic risk management parameters
+- **Architecture**: Single application managing multiple trading approaches and market types
 
 ## Data Flow
 
