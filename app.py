@@ -10,6 +10,7 @@ import threading
 from data_fetcher import DataFetcher
 from strategies import TradingStrategies
 from stock_screener import StockScreener
+from predictive_analysis import PredictiveAnalysis
 from utils import format_currency, calculate_risk_reward
 
 # Page configuration
@@ -27,6 +28,8 @@ if 'strategies' not in st.session_state:
     st.session_state.strategies = TradingStrategies()
 if 'screener' not in st.session_state:
     st.session_state.screener = StockScreener()
+if 'predictor' not in st.session_state:
+    st.session_state.predictor = PredictiveAnalysis()
 if 'last_update' not in st.session_state:
     st.session_state.last_update = None
 if 'market_data' not in st.session_state:
@@ -122,6 +125,131 @@ def create_candlestick_chart(data, symbol, signals=None):
     )
     
     return fig
+
+def display_predictions():
+    """Display predictive analysis for upcoming moves"""
+    st.header("🔮 Predictive Analysis - Before The Move")
+    
+    if not st.session_state.market_data:
+        st.info("Loading market data for predictions...")
+        return
+    
+    # Analyze top stocks for predictions
+    predictions_data = []
+    
+    for symbol, data in list(st.session_state.market_data.items())[:10]:  # Analyze top 10 stocks
+        if data is not None and len(data) > 50:
+            try:
+                prediction_result = st.session_state.predictor.predict_next_move(data, symbol)
+                if prediction_result['predictions']:
+                    predictions_data.extend(prediction_result['predictions'])
+                    
+                    # Store detailed analysis for display
+                    symbol_key = f"{symbol}_analysis"
+                    st.session_state[symbol_key] = prediction_result
+            except Exception as e:
+                continue
+    
+    if not predictions_data:
+        st.info("No high-probability predictions detected at the moment. Waiting for setup patterns...")
+        return
+    
+    # Sort by probability
+    predictions_data.sort(key=lambda x: x['probability'], reverse=True)
+    
+    st.subheader("🚀 High-Probability Move Predictions")
+    
+    # Display top predictions
+    for i, pred in enumerate(predictions_data[:6]):
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            # Color based on direction
+            if pred['direction'] == 'BULLISH':
+                st.success(f"**{pred['symbol'].replace('.NS', '')}** - {pred['direction']}")
+            elif pred['direction'] == 'BEARISH':
+                st.error(f"**{pred['symbol'].replace('.NS', '')}** - {pred['direction']}")
+            else:
+                st.warning(f"**{pred['symbol'].replace('.NS', '')}** - {pred['direction']}")
+            
+            st.write(f"**Probability:** {pred['probability']:.1f}%")
+            st.write(f"**Expected Timeframe:** {pred['timeframe']}")
+            st.write(f"**Supporting Signals:** {pred['supporting_signals']}")
+            
+            # Show key levels
+            if pred.get('key_levels'):
+                levels = pred['key_levels']
+                if levels.get('current_price'):
+                    st.write(f"**Current:** ₹{levels['current_price']:.2f}")
+                    if pred['direction'] == 'BULLISH' and levels.get('resistance'):
+                        st.write(f"**Target:** ₹{levels['resistance']:.2f} (+{((levels['resistance']/levels['current_price'])-1)*100:.1f}%)")
+                    elif pred['direction'] == 'BEARISH' and levels.get('support'):
+                        st.write(f"**Target:** ₹{levels['support']:.2f} ({((levels['support']/levels['current_price'])-1)*100:.1f}%)")
+        
+        with col2:
+            # Show detailed analysis button
+            if st.button(f"📊 Details", key=f"details_{i}"):
+                symbol_key = f"{pred['symbol']}_analysis"
+                if symbol_key in st.session_state:
+                    analysis = st.session_state[symbol_key]
+                    
+                    with st.expander(f"Detailed Analysis - {pred['symbol'].replace('.NS', '')}", expanded=True):
+                        
+                        # Smart Money Flow
+                        if analysis.get('smart_money'):
+                            sm = analysis['smart_money']
+                            st.write(f"**🏦 {sm['pattern']}**")
+                            st.write(f"Signal: {sm['signal']}")
+                            st.write(f"Confidence: {sm['confidence']:.1%}")
+                            st.write(f"Prediction: {sm['prediction']}")
+                            st.write("---")
+                        
+                        # Accumulation/Distribution
+                        if analysis.get('accumulation'):
+                            acc = analysis['accumulation']
+                            st.write(f"**📈 {acc['pattern']}**")
+                            st.write(f"Prediction: {acc['prediction']}")
+                            st.write(f"Strength: {acc['strength']:.1f}%")
+                            st.write("---")
+                        
+                        # Breakout Setups
+                        if analysis.get('breakout_setups'):
+                            st.write("**⚡ Pre-Breakout Setups:**")
+                            for setup in analysis['breakout_setups']:
+                                st.write(f"• {setup['type']}: {setup['signal']}")
+                                st.write(f"  Probability: {setup['probability']:.1%}, Timeframe: {setup['timeframe']}")
+                            st.write("---")
+                        
+                        # Divergences
+                        if analysis.get('divergences'):
+                            st.write("**🔄 Momentum Divergences:**")
+                            for div in analysis['divergences']:
+                                st.write(f"• {div['type']}")
+                                st.write(f"  Signal: {div['signal']}")
+                                st.write(f"  Expected: {div['target_move']}")
+        
+        st.write("---")
+    
+    # Summary statistics
+    st.subheader("📊 Prediction Summary")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    bullish_count = sum(1 for p in predictions_data if p['direction'] == 'BULLISH')
+    bearish_count = sum(1 for p in predictions_data if p['direction'] == 'BEARISH')
+    avg_probability = sum(p['probability'] for p in predictions_data) / len(predictions_data)
+    high_confidence = sum(1 for p in predictions_data if p['probability'] > 75)
+    
+    with col1:
+        st.metric("Bullish Predictions", bullish_count)
+    
+    with col2:
+        st.metric("Bearish Predictions", bearish_count)
+    
+    with col3:
+        st.metric("Avg Probability", f"{avg_probability:.1f}%")
+    
+    with col4:
+        st.metric("High Confidence (>75%)", high_confidence)
 
 def display_trading_signals():
     """Display current trading signals"""
@@ -319,7 +447,7 @@ def main():
     )
     
     # Main content area
-    tab1, tab2, tab3 = st.tabs(["📊 Market Overview", "🎯 Trading Signals", "📈 Stock Analysis"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Market Overview", "🎯 Trading Signals", "🔮 Predictions", "📈 Stock Analysis"])
     
     with tab1:
         display_market_overview()
@@ -346,6 +474,9 @@ def main():
                 st.metric("Avg Confidence", f"{avg_confidence:.1%}")
     
     with tab3:
+        display_predictions()
+    
+    with tab4:
         st.subheader("Individual Stock Analysis")
         
         if st.session_state.market_data:
