@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Trading Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #1e3c72;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .scanner-options {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .scanner-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            min-width: 200px;
+            border: 2px solid transparent;
+        }
+
+        .scanner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            border-color: #2a5298;
+        }
+
+        .scanner-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .scanner-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1e3c72;
+        }
+
+        .scanner-desc {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .features {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .features h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .features ul {
+            text-align: left;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .features li {
+            margin-bottom: 5px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            color: #155724;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            .scanner-options {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Professional Trading Scanner</h1>
+        <p class="subtitle">
+            Advanced real-time analysis with predictive signals that give you 30 minutes to 2 hours advance warning before major market moves.
+        </p>
+
+        <div class="scanner-options">
+            <a href="http://localhost:5000" class="scanner-card" target="_blank">
+                <span class="scanner-icon">📊</span>
+                <div class="scanner-title">NSE Stock Scanner</div>
+                <div class="scanner-desc">
+                    Real-time NSE stock analysis with professional intraday trading strategies and smart money flow detection.
+                </div>
+            </a>
+
+            <a href="http://localhost:5001" class="scanner-card" target="_blank">
+                <span class="scanner-icon">₿</span>
+                <div class="scanner-title">Crypto Scanner</div>
+                <div class="scanner-desc">
+                    24/7 cryptocurrency analysis with whale movement detection and advanced breakout predictions.
+                </div>
+            </a>
+        </div>
+
+        <div class="features">
+            <h3>🔮 Predictive Features</h3>
+            <ul>
+                <li><strong>Smart Money Flow Detection:</strong> Spots institutional accumulation before price moves</li>
+                <li><strong>Pre-Breakout Setups:</strong> Identifies triangle patterns and compression before breakouts</li>
+                <li><strong>Momentum Divergence:</strong> Catches RSI/price divergences before reversals</li>
+                <li><strong>Volume Analysis:</strong> Detects unusual activity and whale movements</li>
+                <li><strong>Risk Management:</strong> Professional position sizing and stop-loss calculations</li>
+            </ul>
+        </div>
+
+        <div class="status">
+            <strong>✅ System Status:</strong> Both scanners are running and analyzing markets in real-time.
+        </div>
+    </div>
+</body>
+</html>

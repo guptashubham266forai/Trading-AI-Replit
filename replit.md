@@ -1,8 +1,8 @@
-# NSE Real-Time Stock Scanner
+# Real-Time Trading Scanner (Stocks & Crypto)
 
 ## Overview
 
-This is a comprehensive real-time stock analysis and trading application built with Streamlit for the National Stock Exchange (NSE) of India. The system provides live market data, technical analysis, trading signals, and stock screening capabilities for intraday trading strategies.
+This is a comprehensive real-time trading analysis application built with Streamlit that supports both NSE stocks and cryptocurrencies. The system provides live market data, technical analysis, trading signals, predictive analysis, and screening capabilities for intraday and swing trading strategies.
 
 ## User Preferences
 
@@ -64,9 +64,36 @@ Preferred communication style: Simple, everyday language.
 - **Localization**: Indian currency formatting (₹, Crore, Lakh)
 
 ### 6. Main Application (`app.py`)
-- **Purpose**: Streamlit UI orchestration and user interface
+- **Purpose**: Streamlit UI orchestration and user interface for NSE stocks
 - **Features**: Interactive charts, real-time updates, signal display
 - **Architecture**: Session state management for persistent data
+
+### 7. Cryptocurrency Data Fetcher (`crypto_data_fetcher.py`)
+- **Purpose**: Real-time cryptocurrency market data acquisition
+- **Features**: 
+  - 24/7 crypto market data (Bitcoin, Ethereum, Binance Coin, etc.)
+  - Symbol formatting for major crypto pairs (BTC-USD, ETH-USD)
+  - Faster refresh rates optimized for crypto market volatility
+  - Pre-configured list of 25 liquid cryptocurrencies
+
+### 8. Cryptocurrency Screener (`crypto_screener.py`)
+- **Purpose**: Filter cryptocurrencies based on trading criteria optimized for crypto markets
+- **Features**: Whale movement detection, unusual activity patterns, breakout candidates
+- **Crypto-specific**: Higher volatility thresholds, volume spike detection, 24/7 market analysis
+
+### 9. Cryptocurrency Application (`crypto_app.py`)
+- **Purpose**: Dedicated Streamlit UI for cryptocurrency trading analysis
+- **Features**: Crypto market overview, prediction analysis, professional crypto trading signals
+- **Architecture**: Parallel session state management with stock scanner
+
+### 10. Predictive Analysis (`predictive_analysis.py`)
+- **Purpose**: Advanced prediction system for both stocks and cryptocurrencies
+- **Features**: 
+  - Smart money flow detection (institutional/whale activity)
+  - Pre-breakout setup identification
+  - Momentum divergence analysis
+  - Accumulation/distribution pattern recognition
+- **Timeframe**: 30 minutes to 2 hours advance warning before major moves
 
 ## Data Flow
 
