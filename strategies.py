@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import streamlit as st
 from technical_indicators import TechnicalIndicators
+import pytz
 
 class TradingStrategies:
     """Implements professional intraday trading strategies"""
@@ -13,6 +14,20 @@ class TradingStrategies:
         self.max_risk_percent = 2.0
         self.min_risk_reward = 2.0
         self.confidence_threshold = 0.6
+    
+    def normalize_timestamp(self, timestamp):
+        """Convert timestamp to timezone-naive datetime for consistency"""
+        try:
+            if hasattr(timestamp, 'to_pydatetime'):
+                timestamp = timestamp.to_pydatetime()
+            
+            # If timezone-aware, convert to naive
+            if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
+                timestamp = timestamp.replace(tzinfo=None)
+            
+            return timestamp
+        except:
+            return datetime.now()
     
     def configure(self, strategies=None, max_risk=2.0, min_rr=2.0):
         """Configure strategy parameters"""
@@ -100,7 +115,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
             
             # Death Cross (Bearish Signal)
@@ -122,7 +137,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
         
         return signals
@@ -164,7 +179,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
             
             # RSI Overbought (Bearish Signal)
@@ -186,7 +201,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
         
         return signals
@@ -232,7 +247,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
             
             # MACD Bearish Crossover
@@ -254,7 +269,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
         
         return signals
@@ -297,7 +312,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
             
             # Price touching upper band (Bearish Signal)
@@ -319,7 +334,7 @@ class TradingStrategies:
                             'stop_loss': stop_loss,
                             'target': target,
                             'risk_reward': risk_reward,
-                            'timestamp': data.index[i] if hasattr(data.index[i], 'to_pydatetime') else datetime.now()
+                            'timestamp': self.normalize_timestamp(data.index[i])
                         })
         
         return signals

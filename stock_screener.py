@@ -10,7 +10,7 @@ class StockScreener:
         # NSE top liquid stocks for intraday trading
         self.liquid_stocks = [
             'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
-            'HDFC.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'ITC.NS', 'KOTAKBANK.NS',
+            'SBIN.NS', 'BHARTIARTL.NS', 'ITC.NS', 'KOTAKBANK.NS',
             'LT.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'HCLTECH.NS', 'AXISBANK.NS',
             'WIPRO.NS', 'ULTRACEMCO.NS', 'BAJFINANCE.NS', 'NESTLEIND.NS', 'ONGC.NS',
             'TATAMOTORS.NS', 'SUNPHARMA.NS', 'NTPC.NS', 'POWERGRID.NS', 'TATASTEEL.NS',

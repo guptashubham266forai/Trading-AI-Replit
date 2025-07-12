@@ -258,10 +258,21 @@ def update_market_data():
         
         # Keep only recent signals (last 2 hours)
         current_time = datetime.now()
-        st.session_state.signals = [
-            s for s in st.session_state.signals 
-            if (current_time - s['timestamp']).total_seconds() < 7200
-        ]
+        filtered_signals = []
+        for s in st.session_state.signals:
+            try:
+                signal_time = s['timestamp']
+                # Convert timezone-aware timestamp to naive if needed
+                if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                    signal_time = signal_time.replace(tzinfo=None)
+                
+                if (current_time - signal_time).total_seconds() < 7200:
+                    filtered_signals.append(s)
+            except:
+                # If timestamp comparison fails, keep the signal
+                filtered_signals.append(s)
+        
+        st.session_state.signals = filtered_signals
         
         # Sort signals by timestamp (most recent first)
         st.session_state.signals.sort(key=lambda x: x['timestamp'], reverse=True)
