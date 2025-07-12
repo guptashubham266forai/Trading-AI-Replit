@@ -16,7 +16,7 @@ class TradingSignal(Base):
     """Database model for trading signals"""
     __tablename__ = 'trading_signals'
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String, primary_key=True)
     symbol = Column(String, nullable=False)
     market_type = Column(String, nullable=False)  # 'stocks' or 'crypto'
     trading_style = Column(String, nullable=False)  # 'intraday' or 'swing'
@@ -39,6 +39,10 @@ class TradingSignal(Base):
     close_timestamp = Column(DateTime)
     close_reason = Column(String)  # 'target', 'stop_loss', 'manual', 'expired'
     
+    # Position details
+    shares = Column(Integer)  # Number of shares/units
+    position_value = Column(Float)  # Total position value
+    
     # P&L calculation
     pnl_points = Column(Float)
     pnl_percentage = Column(Float)
@@ -53,7 +57,7 @@ class PortfolioPerformance(Base):
     """Database model for portfolio performance tracking"""
     __tablename__ = 'portfolio_performance'
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String, primary_key=True)
     date = Column(DateTime, nullable=False)
     market_type = Column(String, nullable=False)
     trading_style = Column(String, nullable=False)
@@ -163,20 +167,30 @@ class DatabaseManager:
         """Save a trading signal to database"""
         session = self.get_session()
         try:
+            # Generate UUID for the signal
+            signal_id = str(uuid.uuid4())
+            
             # Convert signal data to database model
             signal = TradingSignal(
+                id=signal_id,
                 symbol=signal_data['symbol'],
                 market_type=signal_data.get('market_type', 'stocks'),
                 trading_style=signal_data.get('trading_style', 'intraday'),
                 action=signal_data['action'],
                 strategy=signal_data['strategy'],
-                signal_price=signal_data['price'],
+                signal_price=signal_data.get('price', signal_data.get('signal_price')),
                 stop_loss=signal_data.get('stop_loss'),
                 target_price=signal_data.get('target'),
                 confidence=signal_data.get('confidence', 0.0),
                 risk_reward=signal_data.get('risk_reward'),
                 timeframe=signal_data.get('timeframe'),
-                signal_timestamp=signal_data['timestamp']
+                signal_timestamp=signal_data.get('timestamp', signal_data.get('signal_timestamp')),
+                shares=signal_data.get('shares'),
+                position_value=signal_data.get('position_value'),
+                is_executed=signal_data.get('is_executed', False),
+                execution_price=signal_data.get('execution_price'),
+                execution_timestamp=signal_data.get('execution_timestamp'),
+                notes=signal_data.get('notes')
             )
             
             session.add(signal)
@@ -184,7 +198,12 @@ class DatabaseManager:
             return signal.id
         except Exception as e:
             session.rollback()
-            st.error(f"Error saving signal: {str(e)}")
+            # Use print instead of st.error to handle both contexts
+            print(f"Error saving signal: {str(e)}")
+            try:
+                st.error(f"Error saving signal: {str(e)}")
+            except:
+                pass  # Streamlit context not available
             return None
         finally:
             session.close()

@@ -16,6 +16,7 @@ from predictive_analysis import PredictiveAnalysis
 from swing_strategies import SwingTradingStrategies
 from database import DatabaseManager
 from performance_analyzer import PerformanceAnalyzer
+from auto_trader import AutoTrader
 from utils import format_currency, calculate_risk_reward
 
 # Page configuration
@@ -87,6 +88,10 @@ def initialize_session_state():
             st.session_state.performance_analyzer = PerformanceAnalyzer()
         else:
             st.session_state.performance_analyzer = None
+    
+    # Auto-trader for high confidence signals
+    if 'auto_trader' not in st.session_state:
+        st.session_state.auto_trader = AutoTrader(confidence_threshold=95.0)
 
 def get_current_data_fetcher():
     """Get the appropriate data fetcher based on selected market"""
@@ -523,7 +528,17 @@ def update_market_data():
                                     signal_data = signal.copy()
                                     signal_data['market_type'] = st.session_state.market_type
                                     signal_data['trading_style'] = st.session_state.trading_style
-                                    st.session_state.db_manager.save_signal(signal_data)
+                                    
+                                    # Check if signal should be auto-executed
+                                    if st.session_state.auto_trader.should_auto_execute(signal_data):
+                                        # Execute automatic trade for high confidence signals
+                                        st.session_state.auto_trader.execute_auto_trade(
+                                            signal_data, st.session_state.db_manager
+                                        )
+                                    else:
+                                        # Just save the signal
+                                        st.session_state.db_manager.save_signal(signal_data)
+                                        
                                 except Exception as e:
                                     # Silently continue without database
                                     pass
@@ -568,6 +583,24 @@ def main():
     
     # Auto-refresh settings
     auto_refresh = st.sidebar.checkbox("Auto Refresh", value=True)
+    
+    # Auto-trader settings
+    st.sidebar.subheader("🤖 Auto Trading")
+    auto_trade_enabled = st.sidebar.checkbox("Auto Execute High Confidence (≥95%)", value=True)
+    
+    if auto_trade_enabled and st.session_state.get('db_connected', False):
+        # Show auto-trade summary
+        auto_summary = st.session_state.auto_trader.get_auto_trade_summary(
+            st.session_state.db_manager, days_back=7
+        )
+        if auto_summary:
+            st.sidebar.success(f"🤖 Auto Trades (7d): {auto_summary['total_trades']}")
+            st.sidebar.info(f"Win Rate: {auto_summary['win_rate']:.1f}%")
+            st.sidebar.info(f"P&L: ₹{auto_summary['total_pnl']:.2f}")
+        else:
+            st.sidebar.info("🤖 No auto trades yet")
+    elif auto_trade_enabled:
+        st.sidebar.warning("🤖 Requires database connection")
     
     # Refresh interval based on trading style
     if st.session_state.trading_style == 'swing':
