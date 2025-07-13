@@ -9,6 +9,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import streamlit as st
 from database import DatabaseManager
+from timezone_utils import convert_to_ist, format_ist_time, calculate_ist_duration
 
 class LiveTracker:
     """Tracks live P&L for active trading signals"""
@@ -172,13 +173,19 @@ class LiveTracker:
                         confidence_display = f"{confidence_val:.1%}"
                     st.write(f"**Confidence:** {confidence_display}")
                     
+                    # Show execution status for 95%+ confidence
+                    if confidence_val >= 0.95:
+                        st.success("✅ Auto-executed (95%+ confidence)")
+                    
                     # Time since signal
+                    signal_time_ist = format_ist_time(signal['signal_timestamp'])
                     time_diff = datetime.now() - signal['signal_timestamp']
                     if time_diff.seconds < 3600:
                         time_str = f"{time_diff.seconds // 60}m ago"
                     else:
                         time_str = f"{time_diff.seconds // 3600}h ago"
-                    st.write(f"**Time:** {time_str}")
+                    st.write(f"**Signal Time:** {signal_time_ist}")
+                    st.write(f"**Time Ago:** {time_str}")
                 
                 with col2:
                     # P&L display with color coding

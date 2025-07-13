@@ -576,6 +576,9 @@ def update_market_data():
                     # Filter signals by confidence level (>90%)
                     high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.9]
                     
+                    # Separate very high confidence signals (>95%) for auto-execution
+                    very_high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.95]
+                    
                     # Add new signals and save to database
                     for signal in high_confidence_signals:
                         if not any(s['symbol'] == signal['symbol'] and 
@@ -608,9 +611,20 @@ def update_market_data():
                                         signal_data['confidence'] = signal_data['confidence'] / 100
                                     
                                     # Save the signal to database for tracking
-                                    saved_signal = st.session_state.db_manager.save_signal(signal_data)
-                                    if saved_signal:
-                                        signal['database_id'] = saved_signal.id
+                                    saved_signal_id = st.session_state.db_manager.save_signal(signal_data)
+                                    if saved_signal_id:
+                                        signal['database_id'] = saved_signal_id
+                                        
+                                        # Auto-execute trades with confidence >= 95%
+                                        if signal in very_high_confidence_signals:
+                                            # Mark as executed with entry price
+                                            st.session_state.db_manager.update_signal_execution(
+                                                saved_signal_id,
+                                                signal_data.get('price', signal_data.get('signal_price')),
+                                                signal_data.get('timestamp', signal_data.get('signal_timestamp'))
+                                            )
+                                            signal['auto_executed'] = True
+                                            signal['execution_status'] = 'Auto-executed (95%+ confidence)'
                                         
                                 except Exception as e:
                                     # Continue without database but log the error

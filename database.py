@@ -205,7 +205,10 @@ class DatabaseManager:
             
             session.add(signal)
             session.commit()
-            return signal
+            # Refresh the object to get the latest state
+            session.refresh(signal)
+            signal_id = signal.id
+            return signal_id
         except Exception as e:
             session.rollback()
             # Use print instead of st.error to handle both contexts

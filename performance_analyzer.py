@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 from datetime import datetime, timedelta
 from database import DatabaseManager
+from timezone_utils import convert_to_ist, format_ist_time, calculate_ist_duration
 
 class PerformanceAnalyzer:
     """Analyzes trading performance and generates detailed reports"""
@@ -229,35 +230,126 @@ class PerformanceAnalyzer:
         
         st.subheader(f"📋 Signal History ({len(signals)} signals)")
         
-        # Show all signals (both open and closed)
+        # Convert signals to table format
+        table_data = []
         for signal in signals:
-            with st.expander(f"{signal.symbol.replace('.NS', '').replace('-USD', '')} - {signal.action} - {signal.strategy}", expanded=False):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.write(f"**Date:** {signal.signal_timestamp.strftime('%Y-%m-%d %H:%M')}")
-                    st.write(f"**Market:** {signal.market_type.title()}")
-                    st.write(f"**Style:** {signal.trading_style.title()}")
-                    st.write(f"**Entry Price:** {signal.signal_price:.4f}")
-                    if signal.confidence:
-                        conf_display = f"{signal.confidence:.1f}%" if signal.confidence > 1 else f"{signal.confidence:.1%}"
-                        st.write(f"**Confidence:** {conf_display}")
-                
-                with col2:
-                    if signal.is_executed:
-                        st.success("✅ Executed")
-                        st.write(f"**Execution Price:** {signal.execution_price:.4f}")
+            # Status determination
+            if signal.is_closed:
+                status = "Closed"
+                status_color = "🔴" if signal.pnl_percentage and signal.pnl_percentage < 0 else "🟢"
+            elif signal.is_executed:
+                status = "Active"
+                status_color = "🟡"
+            else:
+                status = "Open"
+                status_color = "⚪"
+            
+            # Confidence display
+            conf_display = f"{signal.confidence:.1f}%" if signal.confidence and signal.confidence > 1 else f"{signal.confidence:.1%}" if signal.confidence else "N/A"
+            
+            # P&L calculation
+            pnl_display = "N/A"
+            if signal.is_closed and signal.pnl_percentage:
+                pnl_display = f"{signal.pnl_percentage:.2f}%"
+            
+            # Duration calculation
+            duration = "N/A"
+            if signal.is_executed and signal.is_closed:
+                duration = calculate_ist_duration(signal.execution_timestamp, signal.close_timestamp)
+            elif signal.is_executed:
+                duration = calculate_ist_duration(signal.execution_timestamp, datetime.now())
+            
+            table_data.append({
+                'Symbol': signal.symbol.replace('.NS', '').replace('-USD', ''),
+                'Action': signal.action,
+                'Strategy': signal.strategy,
+                'Market': signal.market_type.title(),
+                'Style': signal.trading_style.title(),
+                'Signal Time': format_ist_time(signal.signal_timestamp),
+                'Entry Price': f"{signal.signal_price:.4f}",
+                'Confidence': conf_display,
+                'Status': f"{status_color} {status}",
+                'Execution Price': f"{signal.execution_price:.4f}" if signal.execution_price else "N/A",
+                'Close Price': f"{signal.close_price:.4f}" if signal.close_price else "N/A",
+                'P&L %': pnl_display,
+                'Duration': duration,
+                'Close Reason': signal.close_reason or "N/A"
+            })
+        
+        # Create DataFrame and sort by signal time (most recent first)
+        df = pd.DataFrame(table_data)
+        df = df.sort_values('Signal Time', ascending=False)
+        
+        # Color coding function
+        def color_code_row(row):
+            colors = []
+            status = row['Status']
+            
+            for col in row.index:
+                if col == 'Status':
+                    if '🟢' in status:  # Closed profitable
+                        colors.append('background-color: #d4edda')
+                    elif '🔴' in status:  # Closed loss
+                        colors.append('background-color: #f8d7da')
+                    elif '🟡' in status:  # Active
+                        colors.append('background-color: #fff3cd')
+                    else:  # Open
+                        colors.append('background-color: #e2e3e5')
+                elif col == 'P&L %':
+                    if 'N/A' not in row[col]:
+                        pnl_value = float(row[col].replace('%', ''))
+                        if pnl_value > 0:
+                            colors.append('background-color: #d4edda')
+                        elif pnl_value < 0:
+                            colors.append('background-color: #f8d7da')
+                        else:
+                            colors.append('')
                     else:
-                        st.info("⏳ Not Executed")
-                    
-                    if signal.is_closed:
-                        st.write(f"**Close Price:** {signal.close_price:.4f}")
-                        if signal.pnl_percentage:
-                            pnl_color = "🟢" if signal.pnl_percentage > 0 else "🔴"
-                            st.write(f"**P&L:** {pnl_color} {signal.pnl_percentage:.2f}%")
-                        st.write(f"**Close Reason:** {signal.close_reason}")
+                        colors.append('')
+                elif col == 'Confidence':
+                    if 'N/A' not in row[col]:
+                        conf_value = float(row[col].replace('%', ''))
+                        if conf_value >= 95:
+                            colors.append('background-color: #d4edda')
+                        elif conf_value >= 90:
+                            colors.append('background-color: #fff3cd')
+                        else:
+                            colors.append('')
                     else:
-                        st.warning("📈 Still Open")
+                        colors.append('')
+                else:
+                    colors.append('')
+            
+            return colors
+        
+        # Display the styled table
+        if not df.empty:
+            st.dataframe(
+                df.style.apply(color_code_row, axis=1),
+                use_container_width=True,
+                height=600
+            )
+            
+            # Summary statistics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_signals = len(signals)
+                st.metric("Total Signals", total_signals)
+            
+            with col2:
+                executed_signals = len([s for s in signals if s.is_executed])
+                st.metric("Executed", executed_signals)
+            
+            with col3:
+                closed_signals = len([s for s in signals if s.is_closed])
+                st.metric("Closed", closed_signals)
+            
+            with col4:
+                high_conf_signals = len([s for s in signals if s.confidence and s.confidence >= 0.95])
+                st.metric("95%+ Confidence", high_conf_signals)
+        else:
+            st.info("No signals found in the database.")
         
         return
         
