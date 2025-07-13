@@ -17,6 +17,7 @@ from swing_strategies import SwingTradingStrategies
 from database import DatabaseManager
 from performance_analyzer import PerformanceAnalyzer
 from auto_trader import AutoTrader
+from live_tracker import LiveTracker
 from utils import format_currency, calculate_risk_reward
 
 # Page configuration
@@ -92,6 +93,13 @@ def initialize_session_state():
     # Auto-trader for high confidence signals
     if 'auto_trader' not in st.session_state:
         st.session_state.auto_trader = AutoTrader(confidence_threshold=90.0)
+    
+    # Live tracker for real-time P&L
+    if 'live_tracker' not in st.session_state:
+        if st.session_state.get('db_connected', False):
+            st.session_state.live_tracker = LiveTracker(st.session_state.db_manager)
+        else:
+            st.session_state.live_tracker = None
 
 def get_current_data_fetcher():
     """Get the appropriate data fetcher based on selected market"""
@@ -595,15 +603,8 @@ def update_market_data():
                                     signal_data['market_type'] = st.session_state.market_type
                                     signal_data['trading_style'] = st.session_state.trading_style
                                     
-                                    # Check if signal should be auto-executed
-                                    if st.session_state.auto_trader.should_auto_execute(signal_data):
-                                        # Execute automatic trade for high confidence signals
-                                        st.session_state.auto_trader.execute_auto_trade(
-                                            signal_data, st.session_state.db_manager
-                                        )
-                                    else:
-                                        # Just save the signal
-                                        st.session_state.db_manager.save_signal(signal_data)
+                                    # Save the signal to database for tracking
+                                    st.session_state.db_manager.save_signal(signal_data)
                                         
                                 except Exception as e:
                                     # Silently continue without database
@@ -904,16 +905,28 @@ def main():
                     st.success(f"Updated {updates} signals")
         
         # Performance sections
-        perf_tab1, perf_tab2, perf_tab3, perf_tab4 = st.tabs([
-            "📈 Overview", "📋 Trade History", "📊 Charts", "🏆 Strategy Analysis"
+        perf_tab1, perf_tab2, perf_tab3, perf_tab4, perf_tab5 = st.tabs([
+            "🔴 Live Tracking", "📈 Overview", "📋 Trade History", "📊 Charts", "🏆 Strategy Analysis"
         ])
         
         with perf_tab1:
+            # Live tracking of active signals
+            if st.session_state.live_tracker:
+                data_fetcher = get_current_data_fetcher()
+                crypto_fetcher = st.session_state.crypto_data_fetcher
+                
+                st.session_state.live_tracker.display_live_performance(
+                    data_fetcher, crypto_fetcher
+                )
+            else:
+                st.error("Live tracking is not available. Please check database connection.")
+        
+        with perf_tab2:
             st.session_state.performance_analyzer.display_performance_overview(
                 market_filter, style_filter, days_back
             )
         
-        with perf_tab2:
+        with perf_tab3:
             st.session_state.performance_analyzer.display_trade_history(
                 market_filter, style_filter, days_back
             )
@@ -923,12 +936,12 @@ def main():
                 market_filter, style_filter, days_back
             )
         
-        with perf_tab3:
+        with perf_tab4:
             st.session_state.performance_analyzer.display_performance_charts(
                 market_filter, style_filter, days_back
             )
         
-        with perf_tab4:
+        with perf_tab5:
             st.session_state.performance_analyzer.display_strategy_comparison(
                 market_filter, style_filter, days_back
             )
