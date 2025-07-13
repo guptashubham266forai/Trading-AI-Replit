@@ -29,12 +29,13 @@ class TradingStrategies:
         except:
             return datetime.now()
     
-    def configure(self, strategies=None, max_risk=2.0, min_rr=2.0):
+    def configure(self, strategies=None, max_risk=2.0, min_rr=2.0, min_confidence=90.0):
         """Configure strategy parameters"""
         if strategies:
             self.active_strategies = strategies
         self.max_risk_percent = max_risk
         self.min_risk_reward = min_rr
+        self.confidence_threshold = min_confidence / 100.0  # Convert percentage to decimal
     
     def add_technical_indicators(self, data):
         """Add all technical indicators to the data"""

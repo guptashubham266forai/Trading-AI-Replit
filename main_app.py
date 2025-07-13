@@ -91,7 +91,7 @@ def initialize_session_state():
     
     # Auto-trader for high confidence signals
     if 'auto_trader' not in st.session_state:
-        st.session_state.auto_trader = AutoTrader(confidence_threshold=95.0)
+        st.session_state.auto_trader = AutoTrader(confidence_threshold=90.0)
 
 def get_current_data_fetcher():
     """Get the appropriate data fetcher based on selected market"""
@@ -514,13 +514,28 @@ def update_market_data():
                     # Generate signals
                     signals = strategies.generate_signals(data_with_indicators, symbol)
                     
+                    # Filter signals by confidence level (>90%)
+                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.9]
+                    
                     # Add new signals and save to database
-                    for signal in signals:
+                    for signal in high_confidence_signals:
                         if not any(s['symbol'] == signal['symbol'] and 
                                  s['timestamp'] == signal['timestamp'] and
                                  s['action'] == signal['action'] 
                                  for s in st.session_state[signals_key]):
+                            # Add market type and trading style to signal
+                            signal['market_type'] = st.session_state.market_type
+                            signal['trading_style'] = st.session_state.trading_style
+                            
                             st.session_state[signals_key].append(signal)
+                            
+                            # Auto-execute high confidence signals
+                            if st.session_state.auto_trader and st.session_state.db_manager:
+                                auto_result = st.session_state.auto_trader.execute_auto_trade(
+                                    signal, st.session_state.db_manager
+                                )
+                                if auto_result:
+                                    signal['auto_executed'] = True
                             
                             # Save to database if connected
                             if st.session_state.get('db_connected', False) and st.session_state.db_manager:
@@ -586,7 +601,8 @@ def main():
     
     # Auto-trader settings
     st.sidebar.subheader("🤖 Auto Trading")
-    auto_trade_enabled = st.sidebar.checkbox("Auto Execute High Confidence (≥95%)", value=True)
+    auto_trade_enabled = st.sidebar.checkbox("Auto Execute High Confidence (≥90%)", value=True)
+    st.sidebar.info("📊 Only signals with ≥90% confidence are shown and auto-traded")
     
     if auto_trade_enabled and st.session_state.get('db_connected', False):
         # Show auto-trade summary

@@ -13,7 +13,7 @@ from database import DatabaseManager
 class AutoTrader:
     """Automatic trading system for high confidence signals"""
     
-    def __init__(self, confidence_threshold=95.0):
+    def __init__(self, confidence_threshold=90.0):
         self.confidence_threshold = confidence_threshold
         self.position_size = 10000  # Default position size in currency
         self.max_risk_per_trade = 0.02  # 2% risk per trade
