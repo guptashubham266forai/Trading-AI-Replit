@@ -413,29 +413,80 @@ def display_trading_signals():
     
     st.header(f"🎯 Active {trading_style} {market_type} Trading Signals")
     
+    # Add confidence filter controls
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        confidence_filter = st.slider(
+            "Minimum Confidence Level (%)",
+            min_value=50,
+            max_value=100,
+            value=90,
+            step=5,
+            help="Filter signals by minimum confidence level"
+        )
+    
+    with col2:
+        show_count = st.selectbox(
+            "Show Count",
+            options=[6, 9, 12, 15],
+            index=1,
+            help="Number of signals to display"
+        )
+    
+    with col3:
+        sort_option = st.selectbox(
+            "Sort By",
+            options=["Confidence", "Time", "Risk:Reward"],
+            index=0,
+            help="Sort signals by selected criteria"
+        )
+    
     if not signals:
         st.info(f"No active {trading_style.lower()} {market_type.lower()} signals at the moment. Signals will appear when favorable conditions are detected.")
         return
     
-    # Filter signals by time based on trading style
+    # Filter signals by time and confidence
     current_time = datetime.now()
     time_filter = 14400 if st.session_state.trading_style == 'swing' else 7200  # 4 hours for swing, 2 hours for intraday
+    confidence_threshold = confidence_filter / 100.0  # Convert to decimal
     
-    recent_signals = []
+    filtered_signals = []
     for signal in signals:
         try:
+            # Time filter
             signal_time = signal['timestamp']
             if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
                 signal_time = signal_time.replace(tzinfo=None)
             
-            if (current_time - signal_time).total_seconds() < time_filter:
-                recent_signals.append(signal)
+            time_valid = (current_time - signal_time).total_seconds() < time_filter
+            
+            # Confidence filter
+            confidence_valid = signal.get('confidence', 0) >= confidence_threshold
+            
+            if time_valid and confidence_valid:
+                filtered_signals.append(signal)
         except:
-            recent_signals.append(signal)
+            if signal.get('confidence', 0) >= confidence_threshold:
+                filtered_signals.append(signal)
     
-    if not recent_signals:
-        st.info(f"No recent {trading_style.lower()} signals found.")
+    # Sort signals based on selected criteria
+    if sort_option == "Confidence":
+        filtered_signals.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+    elif sort_option == "Time":
+        filtered_signals.sort(key=lambda x: x.get('timestamp', datetime.now()), reverse=True)
+    elif sort_option == "Risk:Reward":
+        filtered_signals.sort(key=lambda x: x.get('risk_reward', 0), reverse=True)
+    
+    if not filtered_signals:
+        st.info(f"No recent {trading_style.lower()} signals found with minimum {confidence_filter}% confidence.")
         return
+    
+    # Show signal statistics
+    st.info(f"📊 Showing {len(filtered_signals)} signals with ≥{confidence_filter}% confidence | Average confidence: {sum(s.get('confidence', 0) for s in filtered_signals) / len(filtered_signals):.1%}")
+    
+    # Limit to show_count
+    recent_signals = filtered_signals[:show_count]
     
     # Display signals in cards
     cols = st.columns(3)

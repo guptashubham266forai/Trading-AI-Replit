@@ -53,9 +53,14 @@ class AutoTrader:
             if not self.should_auto_execute(signal):
                 return None
                 
+            # Validate price data (prevent fake prices)
+            entry_price = signal['price']
+            if entry_price <= 0 or entry_price > 1000000:  # Basic validation
+                print(f"Invalid price data for {signal['symbol']}: {entry_price}")
+                return None
+                
             # Calculate position details
             shares = self.calculate_position_size(signal)
-            entry_price = signal['price']
             
             # Create trade execution record
             trade_data = {

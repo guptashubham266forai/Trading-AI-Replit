@@ -425,9 +425,15 @@ class TradingStrategies:
                     signals = self.bollinger_bands_strategy(data, symbol)
                     all_signals.extend(signals)
             
-            # Remove duplicate signals (same action within 15 minutes)
+            # Validate and remove duplicate signals
             unique_signals = []
             for signal in all_signals:
+                # Price validation - filter out unrealistic prices
+                price = signal.get('price', 0)
+                if price <= 0 or price > 1000000:
+                    continue
+                    
+                # Check for duplicates (same action within 15 minutes)
                 is_duplicate = False
                 for existing in unique_signals:
                     if (existing['symbol'] == signal['symbol'] and
