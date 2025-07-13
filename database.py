@@ -170,6 +170,16 @@ class DatabaseManager:
             # Generate UUID for the signal
             signal_id = str(uuid.uuid4())
             
+            # Helper function to convert numpy types to native Python types
+            def convert_numpy_type(value):
+                if value is None:
+                    return None
+                if hasattr(value, 'item'):  # numpy scalar
+                    return value.item()
+                if isinstance(value, (np.integer, np.floating)):
+                    return value.item()
+                return value
+            
             # Convert signal data to database model
             signal = TradingSignal(
                 id=signal_id,
@@ -178,17 +188,17 @@ class DatabaseManager:
                 trading_style=signal_data.get('trading_style', 'intraday'),
                 action=signal_data['action'],
                 strategy=signal_data['strategy'],
-                signal_price=signal_data.get('price', signal_data.get('signal_price')),
-                stop_loss=signal_data.get('stop_loss'),
-                target_price=signal_data.get('target'),
-                confidence=signal_data.get('confidence', 0.0),
-                risk_reward=signal_data.get('risk_reward'),
+                signal_price=convert_numpy_type(signal_data.get('price', signal_data.get('signal_price'))),
+                stop_loss=convert_numpy_type(signal_data.get('stop_loss')),
+                target_price=convert_numpy_type(signal_data.get('target')),
+                confidence=convert_numpy_type(signal_data.get('confidence', 0.0)),
+                risk_reward=convert_numpy_type(signal_data.get('risk_reward')),
                 timeframe=signal_data.get('timeframe'),
                 signal_timestamp=signal_data.get('timestamp', signal_data.get('signal_timestamp')),
-                shares=signal_data.get('shares'),
-                position_value=signal_data.get('position_value'),
+                shares=convert_numpy_type(signal_data.get('shares')),
+                position_value=convert_numpy_type(signal_data.get('position_value')),
                 is_executed=signal_data.get('is_executed', False),
-                execution_price=signal_data.get('execution_price'),
+                execution_price=convert_numpy_type(signal_data.get('execution_price')),
                 execution_timestamp=signal_data.get('execution_timestamp'),
                 notes=signal_data.get('notes')
             )
