@@ -134,7 +134,19 @@ Preferred communication style: Simple, everyday language.
   - Risk metrics including drawdown and Sharpe ratio
   - Performance visualization with interactive charts
   - CSV export functionality for detailed reporting
+  - Direct database queries for reliable signal history
 - **Metrics**: Win rate, profit factor, expectancy, max drawdown, strategy performance
+
+### 15. Live P&L Tracker (`live_tracker.py`)
+- **Purpose**: Real-time performance tracking for active trading signals
+- **Features**: 
+  - Live P&L calculation for active positions
+  - Real-time market price updates
+  - Signal status monitoring (profit/loss/break-even)
+  - Distance to target and stop-loss tracking
+  - Current win rate and unrealized P&L display
+  - Color-coded performance indicators
+- **Integration**: Works with both stock and crypto data fetchers for unified tracking
 
 ## Data Flow
 

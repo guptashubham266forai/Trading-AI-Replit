@@ -164,7 +164,13 @@ class LiveTracker:
                     st.write(f"**Strategy:** {signal['strategy']}")
                     st.write(f"**Entry Price:** {currency}{signal['entry_price']:.4f}")
                     st.write(f"**Current Price:** {currency}{signal['current_price']:.4f}")
-                    st.write(f"**Confidence:** {signal['confidence']:.1%}")
+                    # Fix confidence display (convert to percentage if needed)
+                    confidence_val = signal['confidence']
+                    if confidence_val > 1:
+                        confidence_display = f"{confidence_val:.1f}%"
+                    else:
+                        confidence_display = f"{confidence_val:.1%}"
+                    st.write(f"**Confidence:** {confidence_display}")
                     
                     # Time since signal
                     time_diff = datetime.now() - signal['signal_timestamp']

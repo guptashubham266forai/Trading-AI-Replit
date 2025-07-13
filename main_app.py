@@ -603,12 +603,19 @@ def update_market_data():
                                     signal_data['market_type'] = st.session_state.market_type
                                     signal_data['trading_style'] = st.session_state.trading_style
                                     
+                                    # Ensure confidence is in proper format (0.0-1.0)
+                                    if signal_data.get('confidence', 0) > 1:
+                                        signal_data['confidence'] = signal_data['confidence'] / 100
+                                    
                                     # Save the signal to database for tracking
-                                    st.session_state.db_manager.save_signal(signal_data)
+                                    saved_signal = st.session_state.db_manager.save_signal(signal_data)
+                                    if saved_signal:
+                                        signal['database_id'] = saved_signal.id
                                         
                                 except Exception as e:
-                                    # Silently continue without database
-                                    pass
+                                    # Continue without database but log the error
+                                    print(f"Database save error: {e}")
+                                    signal['database_error'] = str(e)
             except Exception as e:
                 continue
         

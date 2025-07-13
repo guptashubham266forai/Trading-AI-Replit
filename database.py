@@ -205,7 +205,7 @@ class DatabaseManager:
             
             session.add(signal)
             session.commit()
-            return signal.id
+            return signal
         except Exception as e:
             session.rollback()
             # Use print instead of st.error to handle both contexts
