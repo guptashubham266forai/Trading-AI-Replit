@@ -92,8 +92,13 @@ class DatabaseManager:
         # Fix URL encoding issues for passwords with special characters
         self.database_url = self._fix_connection_url(self.database_url)
         
-        # Create engine and session
-        self.engine = create_engine(self.database_url)
+        # Create engine and session with connection pooling and SSL settings
+        self.engine = create_engine(
+            self.database_url, 
+            pool_pre_ping=True,
+            pool_recycle=300,
+            echo=False
+        )
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         
         # Create tables

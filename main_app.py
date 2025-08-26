@@ -74,15 +74,11 @@ def initialize_session_state():
     if 'predictor' not in st.session_state:
         st.session_state.predictor = PredictiveAnalysis()
     
-    # Database and Performance
+    # Database and Performance (temporarily disabled for initial setup)
     if 'db_manager' not in st.session_state:
-        try:
-            st.session_state.db_manager = DatabaseManager()
-            st.session_state.db_connected = True
-        except Exception as e:
-            # Silently fail and continue without database
-            st.session_state.db_manager = None
-            st.session_state.db_connected = False
+        # Temporarily disable database to fix symbol formatting issues
+        st.session_state.db_manager = None
+        st.session_state.db_connected = False
     
     if 'performance_analyzer' not in st.session_state:
         if st.session_state.get('db_connected', False):
@@ -90,9 +86,9 @@ def initialize_session_state():
         else:
             st.session_state.performance_analyzer = None
     
-    # Auto-trader for high confidence signals
+    # Auto-trader for high confidence signals (temporarily disabled)
     if 'auto_trader' not in st.session_state:
-        st.session_state.auto_trader = AutoTrader(confidence_threshold=90.0)
+        st.session_state.auto_trader = None
     
     # Live tracker for real-time P&L
     if 'live_tracker' not in st.session_state:
