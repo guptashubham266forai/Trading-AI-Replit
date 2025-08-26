@@ -12,6 +12,7 @@ from crypto_data_fetcher import CryptoDataFetcher
 from strategies import TradingStrategies
 from advanced_strategies import AdvancedTradingStrategies
 from chart_generator import SignalChartGenerator
+from audio_notifications import AudioNotifications
 from stock_screener import StockScreener
 from crypto_screener import CryptoScreener
 from predictive_analysis import PredictiveAnalysis
@@ -83,6 +84,14 @@ def initialize_session_state():
     # Chart generator
     if 'chart_generator' not in st.session_state:
         st.session_state.chart_generator = SignalChartGenerator()
+    
+    # Audio notifications
+    if 'audio_notifications' not in st.session_state:
+        st.session_state.audio_notifications = AudioNotifications()
+    
+    # Previous signals for comparison (to detect new signals)
+    if 'previous_signals' not in st.session_state:
+        st.session_state.previous_signals = []
     
     # Database and Performance (temporarily disabled for initial setup)
     if 'db_manager' not in st.session_state:
@@ -685,6 +694,20 @@ def update_market_data():
         
         st.session_state[signals_key] = filtered_signals
         st.session_state[signals_key].sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Check for new signals and play notifications
+        current_signals = [s for s in st.session_state[signals_key] if s.get('market_type') == st.session_state.market_type]
+        
+        if st.session_state.get('audio_notifications_enabled', False):
+            try:
+                st.session_state.audio_notifications.check_for_new_signals(
+                    current_signals, st.session_state.previous_signals
+                )
+                # Update previous signals for next comparison
+                st.session_state.previous_signals = current_signals.copy()
+            except Exception as notify_error:
+                print(f"Notification error: {notify_error}")
+        
         st.session_state[last_update_key] = current_time
         
     except Exception as e:
@@ -702,6 +725,9 @@ def main():
     
     # Configuration sidebar
     st.sidebar.header("⚙️ Strategy Configuration")
+    
+    # Audio notification controls
+    audio_enabled = st.session_state.audio_notifications.create_notification_controls()
     
     # Auto-refresh settings
     auto_refresh = st.sidebar.checkbox("Auto Refresh", value=True)
