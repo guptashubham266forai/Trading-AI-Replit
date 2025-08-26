@@ -258,9 +258,9 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
             go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')),
             row=3, col=1
         )
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
-        fig.add_hline(y=50, line_dash="dot", line_color="gray", row=3, col=1)
+        fig.add_hline(y=70, line_dash="dash", line_color="red", row="3", col="1")
+        fig.add_hline(y=30, line_dash="dash", line_color="green", row="3", col="1")
+        fig.add_hline(y=50, line_dash="dot", line_color="gray", row="3", col="1")
     
     # MACD
     if all(col in data.columns for col in ['MACD', 'MACD_Signal', 'MACD_Histogram']):
@@ -285,8 +285,8 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 go.Scatter(x=data.index, y=data['Stoch_D'], name='Stoch %D', line=dict(color='red')),
                 row=4, col=1
             )
-            fig.add_hline(y=80, line_dash="dash", line_color="red", row=4, col=1)
-            fig.add_hline(y=20, line_dash="dash", line_color="green", row=4, col=1)
+            fig.add_hline(y=80, line_dash="dash", line_color="red", row="4", col="1")
+            fig.add_hline(y=20, line_dash="dash", line_color="green", row="4", col="1")
         
         # Williams %R
         elif 'Williams_R' in data.columns:
@@ -294,8 +294,8 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 go.Scatter(x=data.index, y=data['Williams_R'], name='Williams %R', line=dict(color='orange')),
                 row=4, col=1
             )
-            fig.add_hline(y=-20, line_dash="dash", line_color="red", row=4, col=1)
-            fig.add_hline(y=-80, line_dash="dash", line_color="green", row=4, col=1)
+            fig.add_hline(y=-20, line_dash="dash", line_color="red", row="4", col="1")
+            fig.add_hline(y=-80, line_dash="dash", line_color="green", row="4", col="1")
     
     fig.update_layout(
         title=f"{symbol} - {st.session_state.market_type.title()} {st.session_state.trading_style.title()} Analysis",
