@@ -11,6 +11,7 @@ from data_fetcher import DataFetcher
 from crypto_data_fetcher import CryptoDataFetcher
 from strategies import TradingStrategies
 from advanced_strategies import AdvancedTradingStrategies
+from chart_generator import SignalChartGenerator
 from stock_screener import StockScreener
 from crypto_screener import CryptoScreener
 from predictive_analysis import PredictiveAnalysis
@@ -78,6 +79,10 @@ def initialize_session_state():
     # Advanced trading strategies
     if 'advanced_strategies' not in st.session_state:
         st.session_state.advanced_strategies = AdvancedTradingStrategies()
+    
+    # Chart generator
+    if 'chart_generator' not in st.session_state:
+        st.session_state.chart_generator = SignalChartGenerator()
     
     # Database and Performance (temporarily disabled for initial setup)
     if 'db_manager' not in st.session_state:
@@ -538,6 +543,28 @@ def display_trading_signals():
                 time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
             
             st.write(f"**Time:** {time_str}")
+            
+            # Add chart visualization button
+            if st.button(f"📊 View Chart", key=f"chart_{i}"):
+                # Get current market data for this symbol
+                current_data = get_current_market_data()
+                symbol = signal['symbol']
+                
+                if current_data and symbol in current_data:
+                    chart_data = current_data[symbol]
+                    
+                    # Generate mini chart for this signal
+                    mini_chart = st.session_state.chart_generator.create_mini_chart(
+                        chart_data, signal, symbol, height=350
+                    )
+                    
+                    if mini_chart:
+                        st.plotly_chart(mini_chart, use_container_width=True)
+                    else:
+                        st.error("Unable to generate chart")
+                else:
+                    st.warning("Chart data not available")
+            
             st.write("---")
 
 def update_market_data():
@@ -815,7 +842,20 @@ def main():
                     
                     with col3:
                         if st.button(f"📊 Chart", key=f"adv_chart_{i}"):
-                            st.info("Advanced charting in next update")
+                            # Generate and display the signal chart
+                            symbol = signal['symbol']
+                            current_data = get_current_market_data()
+                            
+                            if current_data and symbol in current_data:
+                                chart_data = current_data[symbol]
+                                chart_fig = st.session_state.chart_generator.create_signal_chart(
+                                    chart_data, signal, symbol
+                                )
+                                
+                                if chart_fig:
+                                    st.plotly_chart(chart_fig, use_container_width=True)
+                                else:
+                                    st.error("Unable to generate chart")
                         
                         if signal.get('auto_executed'):
                             st.success("🤖 Auto-executed")

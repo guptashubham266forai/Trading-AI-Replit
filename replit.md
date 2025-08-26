@@ -51,6 +51,18 @@ Preferred communication style: Simple, everyday language.
 - **Indicators**: VWAP, Money Flow Index, ATR, Market structure patterns
 - **Profit Optimization**: Designed for 15-25% monthly returns vs 5-8% basic strategies
 
+### 17. Signal Chart Generator (`chart_generator.py`)
+- **Purpose**: Visual confirmation system for trading signals with candlestick charts
+- **Features**:
+  - **Interactive Candlestick Charts**: 5-minute interval charts for precise entry timing
+  - **Color-Coded Signals**: Green buy arrows, red sell arrows with entry point marking
+  - **Risk-Reward Visualization**: Shaded profit zones (green) and risk zones (red)
+  - **Technical Indicator Overlay**: VWAP, moving averages, Bollinger Bands integration
+  - **Price Level Lines**: Horizontal lines for entry, stop-loss, and target prices
+  - **Volume Analysis**: Volume bars with color coding for buying/selling pressure
+  - **Mini Chart Mode**: Compact charts for signal cards with essential information
+- **Chart Types**: Full detailed charts and mini charts for different display contexts
+
 ### 2. Technical Indicators (`technical_indicators.py`)
 - **Purpose**: Calculate technical analysis indicators
 - **Indicators**: Moving averages, RSI, MACD, Bollinger Bands, Stochastic
@@ -214,5 +226,8 @@ Preferred communication style: Simple, everyday language.
 - **Advanced Signal Tab**: Dedicated interface for premium strategy signals
 - **Improved Risk Management**: Higher risk-reward ratios (3:1) for advanced strategies
 - **Professional Configuration**: 85% minimum confidence vs 60% for basic strategies
+- **Visual Chart Integration**: Added candlestick charts with color-coded entry/exit points for every signal
+- **Signal Chart Generator**: Interactive 5-minute interval charts showing exact entry, stop-loss, and target levels
+- **Color-Coded Visualization**: Green zones for profit areas, red zones for risk areas, with clear signal markers
 
 The architecture prioritizes real-time performance, user experience, and trading-focused functionality while maintaining code modularity and extensibility for future enhancements.
