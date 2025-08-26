@@ -10,6 +10,7 @@ import threading
 from data_fetcher import DataFetcher
 from crypto_data_fetcher import CryptoDataFetcher
 from strategies import TradingStrategies
+from advanced_strategies import AdvancedTradingStrategies
 from stock_screener import StockScreener
 from crypto_screener import CryptoScreener
 from predictive_analysis import PredictiveAnalysis
@@ -73,6 +74,10 @@ def initialize_session_state():
     # Predictor
     if 'predictor' not in st.session_state:
         st.session_state.predictor = PredictiveAnalysis()
+    
+    # Advanced trading strategies
+    if 'advanced_strategies' not in st.session_state:
+        st.session_state.advanced_strategies = AdvancedTradingStrategies()
     
     # Database and Performance (temporarily disabled for initial setup)
     if 'db_manager' not in st.session_state:
@@ -566,8 +571,14 @@ def update_market_data():
                     data_with_indicators = strategies.add_technical_indicators(data)
                     st.session_state[market_data_key][symbol] = data_with_indicators
                     
-                    # Generate signals
-                    signals = strategies.generate_signals(data_with_indicators, symbol)
+                    # Generate basic signals
+                    basic_signals = strategies.generate_signals(data_with_indicators, symbol)
+                    
+                    # Generate advanced signals
+                    advanced_signals = st.session_state.advanced_strategies.generate_advanced_signals(data_with_indicators, symbol)
+                    
+                    # Combine signals
+                    signals = basic_signals + advanced_signals
                     
                     # Filter signals by confidence level (>90%)
                     high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.9]
@@ -742,9 +753,10 @@ def main():
     )
     
     # Main content tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Market Overview", 
         "🎯 Trading Signals", 
+        "🚀 Advanced Signals",
         "🔮 Predictions", 
         "📈 Detailed Analysis",
         "📊 Performance"
@@ -757,6 +769,88 @@ def main():
         display_trading_signals()
     
     with tab3:
+        # Advanced signals tab
+        st.header("🚀 Advanced Trading Signals")
+        st.info("Professional strategies with 3:1 risk-reward ratios and 85%+ confidence")
+        
+        current_signals = get_current_signals()
+        advanced_signals = [s for s in current_signals if s.get('strategy', '').startswith(('Smart Money', 'Volume Price', 'Momentum Divergence'))]
+        
+        if advanced_signals:
+            st.subheader("💎 Premium Strategy Signals")
+            
+            for i, signal in enumerate(advanced_signals[:8]):
+                with st.expander(f"{signal['symbol'].replace('.NS', '').replace('-USD', '')} - {signal['action']} - {signal['strategy']}", expanded=i<3):
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    
+                    with col1:
+                        confidence_color = "🟢" if signal.get('confidence', 0) > 0.9 else "🟡" if signal.get('confidence', 0) > 0.8 else "🟠"
+                        st.write(f"{confidence_color} **Confidence:** {signal.get('confidence', 0):.1%}")
+                        
+                        if st.session_state.market_type == 'crypto':
+                            price_format = f"${signal['price']:.4f}"
+                            stop_format = f"${signal.get('stop_loss', 0):.4f}"
+                            target_format = f"${signal.get('target', 0):.4f}"
+                        else:
+                            price_format = f"₹{signal['price']:.2f}"
+                            stop_format = f"₹{signal.get('stop_loss', 0):.2f}"
+                            target_format = f"₹{signal.get('target', 0):.2f}"
+                        
+                        st.write(f"**Entry Price:** {price_format}")
+                        st.write(f"**Stop Loss:** {stop_format}")
+                        st.write(f"**Target:** {target_format}")
+                        st.write(f"**Risk:Reward:** 1:{signal.get('risk_reward', 0):.1f}")
+                        
+                        if signal.get('notes'):
+                            st.write(f"**Analysis:** {signal['notes']}")
+                    
+                    with col2:
+                        st.metric("Action", signal['action'])
+                        time_ago = datetime.now() - signal['timestamp'].replace(tzinfo=None)
+                        if time_ago.total_seconds() < 3600:
+                            time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
+                        else:
+                            time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+                        st.write(f"**Time:** {time_str}")
+                    
+                    with col3:
+                        if st.button(f"📊 Chart", key=f"adv_chart_{i}"):
+                            st.info("Advanced charting in next update")
+                        
+                        if signal.get('auto_executed'):
+                            st.success("🤖 Auto-executed")
+                        else:
+                            st.warning("⚠️ Manual trade")
+        else:
+            st.info("No advanced signals generated yet. Advanced strategies need more market data to identify high-probability setups.")
+            
+            # Show what advanced strategies look for
+            st.subheader("🎯 Advanced Strategy Overview")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.write("**🧠 Smart Money Concepts**")
+                st.write("• Market structure breaks")
+                st.write("• High volume confirmation")
+                st.write("• Institutional order flow")
+                st.write("• 85%+ win rate target")
+                
+            with col2:
+                st.write("**📊 Volume Price Analysis**")
+                st.write("• VWAP breakouts/breakdowns")
+                st.write("• Volume spike detection")
+                st.write("• Smart money accumulation")
+                st.write("• 2.5:1 minimum R:R")
+                
+            with col3:
+                st.write("**⚡ Momentum Divergence**")
+                st.write("• RSI-price divergences")
+                st.write("• Hidden divergence patterns")
+                st.write("• Trend reversal signals")
+                st.write("• 3:1 risk-reward ratio")
+
+    with tab4:
         # Predictions tab (reuse existing prediction logic)
         st.header("🔮 Market Predictions")
         current_data = get_current_market_data()

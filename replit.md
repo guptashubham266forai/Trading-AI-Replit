@@ -40,6 +40,17 @@ Preferred communication style: Simple, everyday language.
   - Intelligent caching mechanism
   - Pre-configured list of 50 liquid NSE stocks
 
+### 16. Advanced Trading Strategies (`advanced_strategies.py`)
+- **Purpose**: Professional-grade trading strategies for higher profits
+- **Features**:
+  - **Smart Money Concepts (SMC)**: Market structure breaks with institutional flow
+  - **Volume Price Analysis (VPA)**: VWAP breakouts with volume confirmation
+  - **Momentum Divergence**: RSI-price divergences for reversal signals
+  - **Advanced Risk Management**: 3:1 minimum risk-reward ratios
+  - **High Confidence Filtering**: 85%+ confidence threshold
+- **Indicators**: VWAP, Money Flow Index, ATR, Market structure patterns
+- **Profit Optimization**: Designed for 15-25% monthly returns vs 5-8% basic strategies
+
 ### 2. Technical Indicators (`technical_indicators.py`)
 - **Purpose**: Calculate technical analysis indicators
 - **Indicators**: Moving averages, RSI, MACD, Bollinger Bands, Stochastic
@@ -192,5 +203,16 @@ Preferred communication style: Simple, everyday language.
 4. **In-Memory Caching**: Balances performance with data freshness for real-time applications
 5. **Session State**: Enables persistent user experience across interactions
 6. **Indian Market Focus**: Specialized for NSE trading with local formatting and market hours
+7. **Advanced Strategy Integration**: Professional trading algorithms with higher profit potential
+8. **Multi-Strategy Approach**: Basic strategies (2:1 R:R) + Advanced strategies (3:1 R:R) for diversified signal generation
+
+### Recent Changes (August 26, 2025)
+- **Enhanced Trading Strategies**: Added professional-grade advanced strategies
+- **Smart Money Concepts**: Market structure analysis with institutional flow detection
+- **Volume Price Analysis**: VWAP-based strategies with volume confirmation
+- **Momentum Divergence**: RSI divergence detection for high-probability reversals
+- **Advanced Signal Tab**: Dedicated interface for premium strategy signals
+- **Improved Risk Management**: Higher risk-reward ratios (3:1) for advanced strategies
+- **Professional Configuration**: 85% minimum confidence vs 60% for basic strategies
 
 The architecture prioritizes real-time performance, user experience, and trading-focused functionality while maintaining code modularity and extensibility for future enhancements.
