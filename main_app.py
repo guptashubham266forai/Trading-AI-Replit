@@ -752,6 +752,51 @@ def main():
     """Main application function"""
     initialize_session_state()
     
+    # EMERGENCY SIGNAL GENERATION BUTTON - TOP OF PAGE
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("⚡ EMERGENCY: GENERATE SIGNALS NOW", type="primary", use_container_width=True):
+            st.info("🔧 Forcing signal generation...")
+            
+            try:
+                from crypto_data_fetcher import CryptoDataFetcher
+                from strategies import TradingStrategies
+                from advanced_strategies import AdvancedTradingStrategies
+                
+                crypto_fetcher = CryptoDataFetcher()
+                strategies = TradingStrategies()
+                advanced_strategies = AdvancedTradingStrategies()
+                
+                # Get Bitcoin data and force generate signals
+                test_symbol = "BTC-USD"
+                data = crypto_fetcher.get_intraday_data(test_symbol, period="1d", interval="5m")
+                
+                if data is not None and len(data) > 20:
+                    # Add indicators and generate signals
+                    data_with_indicators = strategies.add_technical_indicators(data)
+                    basic_signals = strategies.generate_signals(data_with_indicators, test_symbol)
+                    advanced_signals = advanced_strategies.generate_advanced_signals(data_with_indicators, test_symbol)
+                    all_signals = basic_signals + advanced_signals
+                    
+                    # Force add to session state
+                    if 'crypto_signals' not in st.session_state:
+                        st.session_state.crypto_signals = []
+                    
+                    for signal in all_signals:
+                        signal['market_type'] = 'crypto'
+                        signal['trading_style'] = 'intraday'
+                        st.session_state.crypto_signals.append(signal)
+                    
+                    st.success(f"✅ FORCED GENERATION: {len(all_signals)} signals created!")
+                    st.rerun()
+                else:
+                    st.error("❌ Could not get data for signal generation")
+                    
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+    
+    st.write("---")
+    
     st.title("🎯 Professional Trading Platform")
     st.subheader("Advanced Multi-Market Analysis with Intraday & Swing Trading Strategies")
     
