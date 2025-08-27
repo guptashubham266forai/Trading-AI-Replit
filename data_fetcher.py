@@ -24,7 +24,7 @@ class DataFetcher:
         ]
         self.cache = {}
         self.cache_expiry = {}
-        self.cache_duration = 300  # 5 minutes cache
+        self.cache_duration = 60  # 1 minute cache for faster updates
     
     def get_nse_symbols(self):
         """Get list of NSE symbols for major stocks"""

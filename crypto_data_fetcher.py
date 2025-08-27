@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import requests
 import time
 import streamlit as st
+from realtime_crypto import RealtimeCryptoData
 
 class CryptoDataFetcher:
     """Handles fetching real-time cryptocurrency data"""
@@ -35,7 +36,11 @@ class CryptoDataFetcher:
         
         self.cache = {}
         self.cache_expiry = {}
-        self.cache_duration = 60  # 1 minute cache for crypto (faster market)
+        self.cache_duration = 30  # 30 seconds cache for crypto (faster market)
+        
+        # Initialize real-time data fetcher
+        self.realtime_data = RealtimeCryptoData()
+        self.use_realtime = True  # Flag to enable real-time mode
     
     def get_crypto_symbols(self):
         """Get list of cryptocurrency symbols"""
@@ -52,12 +57,18 @@ class CryptoDataFetcher:
         return symbol.upper()
     
     def get_real_time_price(self, symbol):
-        """Get real-time price for a single cryptocurrency"""
+        """Get real-time price for a single cryptocurrency using fastest available method"""
         try:
             symbol = self.clean_symbol(symbol)
-            ticker = yf.Ticker(symbol)
             
-            # Get current data
+            # First try real-time Binance API (much faster)
+            if self.use_realtime:
+                realtime_price = self.realtime_data.get_realtime_price_rest(symbol)
+                if realtime_price:
+                    return realtime_price
+            
+            # Fallback to Yahoo Finance if Binance fails
+            ticker = yf.Ticker(symbol)
             info = ticker.info
             if 'regularMarketPrice' in info:
                 return {
@@ -67,7 +78,8 @@ class CryptoDataFetcher:
                     'change_percent': info.get('regularMarketChangePercent', 0),
                     'volume': info.get('regularMarketVolume', 0),
                     'market_cap': info.get('marketCap', 0),
-                    'timestamp': datetime.now()
+                    'timestamp': datetime.now(),
+                    'source': 'yahoo_finance'
                 }
             else:
                 return None
@@ -285,25 +297,41 @@ class CryptoDataFetcher:
                 'timestamp': datetime.now()
             }
     
+    def get_multiple_prices_fast(self, symbols):
+        """Get multiple cryptocurrency prices using fast batch API"""
+        if self.use_realtime:
+            # Use Binance batch API for much faster results
+            batch_results = self.realtime_data.get_multiple_prices_fast(symbols)
+            if batch_results:
+                return batch_results
+        
+        # Fallback to individual calls if batch fails
+        results = {}
+        for symbol in symbols:
+            try:
+                price_data = self.get_real_time_price(symbol)
+                if price_data:
+                    results[symbol] = price_data
+                time.sleep(0.02)  # Minimal delay
+            except:
+                continue
+        return results
+    
     def get_top_gainers_losers(self, limit=10):
-        """Get top gainers and losers from tracked cryptocurrencies"""
+        """Get top gainers and losers from tracked cryptocurrencies using fast batch method"""
         try:
+            # Use fast batch method
+            all_prices = self.get_multiple_prices_fast(self.crypto_symbols[:20])
+            
             gainers = []
             losers = []
             
-            for symbol in self.crypto_symbols[:20]:  # Check top 20 cryptos
-                try:
-                    price_data = self.get_real_time_price(symbol)
-                    if price_data and price_data['change_percent'] != 0:
-                        if price_data['change_percent'] > 0:
-                            gainers.append(price_data)
-                        else:
-                            losers.append(price_data)
-                    
-                    time.sleep(0.05)  # Rate limiting
-                    
-                except:
-                    continue
+            for price_data in all_prices.values():
+                if price_data and price_data['change_percent'] != 0:
+                    if price_data['change_percent'] > 0:
+                        gainers.append(price_data)
+                    else:
+                        losers.append(price_data)
             
             # Sort and limit results
             gainers.sort(key=lambda x: x['change_percent'], reverse=True)

@@ -599,7 +599,28 @@ def update_market_data():
         period = '5d' if st.session_state.trading_style == 'swing' else '1d'
         interval = '1h' if st.session_state.trading_style == 'swing' else '5m'
         
-        for symbol in symbols:
+        # Use fast batch fetching for crypto prices (much faster)
+        if st.session_state.market_type == 'crypto':
+            # Get real-time prices first for faster overview
+            batch_prices = data_fetcher.get_multiple_prices_fast(symbols[:20])
+            
+            # Update session state with fast price data
+            for symbol, price_data in batch_prices.items():
+                if symbol not in st.session_state[market_data_key]:
+                    # Create minimal data for display
+                    temp_data = pd.DataFrame({
+                        'Close': [price_data['price']],
+                        'Volume': [price_data['volume']],
+                        'Open': [price_data['price']],
+                        'High': [price_data['price']],
+                        'Low': [price_data['price']]
+                    })
+                    temp_data.index = [price_data['timestamp']]
+                    st.session_state[market_data_key][symbol] = temp_data
+        
+        # Fetch detailed data for technical analysis (limit for performance)
+        symbol_limit = 15 if st.session_state.market_type == 'crypto' else 20
+        for symbol in symbols[:symbol_limit]:
             try:
                 data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
                 if data is not None and len(data) > 0:

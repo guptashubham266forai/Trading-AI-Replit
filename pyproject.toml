@@ -13,5 +13,7 @@ dependencies = [
     "scipy>=1.16.0",
     "sqlalchemy>=2.0.41",
     "streamlit>=1.46.1",
+    "websocket>=0.2.1",
+    "websocket-client>=1.8.0",
     "yfinance>=0.2.65",
 ]
