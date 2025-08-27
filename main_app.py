@@ -1056,26 +1056,35 @@ def create_signal_chart_with_levels(data, signal, symbol, interval):
     # Add colored zones only from signal generation time forward
     signal_time = signal.get('timestamp', data.index[-1])
     
-    # Find the signal time in the data index
+    # Find the signal time in the data index with proper timezone handling
     try:
+        # Convert both signal time and data index to timezone-naive for comparison
         if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
-            signal_time = signal_time.replace(tzinfo=None)
-        
-        # Get data from signal time forward
-        future_data = data[data.index >= signal_time]
-        
-        if len(future_data) > 0:
-            start_time = future_data.index[0]
-            end_time = data.index[-1]
+            signal_time_naive = signal_time.replace(tzinfo=None)
+        else:
+            signal_time_naive = signal_time
             
-            # Add colored zones only for the period after signal generation
+        # Convert data index to timezone-naive
+        data_index_naive = data.index
+        if hasattr(data.index, 'tz') and data.index.tz is not None:
+            data_index_naive = data.index.tz_convert(None)
+        
+        # Find the closest time in data to signal time
+        if len(data_index_naive) > 0:
+            # Find the closest index point to signal time
+            time_diffs = abs(data_index_naive - signal_time_naive)
+            closest_idx = time_diffs.argmin()
+            start_time = data_index_naive[closest_idx]
+            end_time = data_index_naive[-1]
+            
+            # Add colored zones from signal time to end of chart
             if signal['action'] == 'BUY':
                 # Green zone (profit area above entry) - from signal time forward
                 fig.add_shape(
                     type="rect",
                     x0=start_time, x1=end_time,
                     y0=entry_price, y1=target,
-                    fillcolor="green", opacity=0.15,
+                    fillcolor="green", opacity=0.2,
                     layer="below", line_width=0,
                     row=1, col=1
                 )
@@ -1084,7 +1093,7 @@ def create_signal_chart_with_levels(data, signal, symbol, interval):
                     type="rect",
                     x0=start_time, x1=end_time,
                     y0=stop_loss, y1=entry_price,
-                    fillcolor="red", opacity=0.15,
+                    fillcolor="red", opacity=0.2,
                     layer="below", line_width=0,
                     row=1, col=1
                 )
@@ -1094,7 +1103,7 @@ def create_signal_chart_with_levels(data, signal, symbol, interval):
                     type="rect",
                     x0=start_time, x1=end_time,
                     y0=target, y1=entry_price,
-                    fillcolor="green", opacity=0.15,
+                    fillcolor="green", opacity=0.2,
                     layer="below", line_width=0,
                     row=1, col=1
                 )
@@ -1103,14 +1112,28 @@ def create_signal_chart_with_levels(data, signal, symbol, interval):
                     type="rect",
                     x0=start_time, x1=end_time,
                     y0=entry_price, y1=stop_loss,
-                    fillcolor="red", opacity=0.15,
+                    fillcolor="red", opacity=0.2,
                     layer="below", line_width=0,
                     row=1, col=1
                 )
+        else:
+            # Fallback: Add zones for entire chart if time matching fails
+            if signal['action'] == 'BUY':
+                fig.add_hrect(y0=entry_price, y1=target, fillcolor="green", opacity=0.15, row=1, col=1)
+                fig.add_hrect(y0=stop_loss, y1=entry_price, fillcolor="red", opacity=0.15, row=1, col=1)
+            else:
+                fig.add_hrect(y0=target, y1=entry_price, fillcolor="green", opacity=0.15, row=1, col=1)
+                fig.add_hrect(y0=entry_price, y1=stop_loss, fillcolor="red", opacity=0.15, row=1, col=1)
+                
     except Exception as e:
         print(f"Error adding colored zones: {str(e)}")
-        # Fallback to full chart coloring if timestamp matching fails
-        pass
+        # Fallback to full chart coloring with horizontal rectangles
+        if signal['action'] == 'BUY':
+            fig.add_hrect(y0=entry_price, y1=target, fillcolor="green", opacity=0.15, row=1, col=1)
+            fig.add_hrect(y0=stop_loss, y1=entry_price, fillcolor="red", opacity=0.15, row=1, col=1)
+        else:
+            fig.add_hrect(y0=target, y1=entry_price, fillcolor="green", opacity=0.15, row=1, col=1)
+            fig.add_hrect(y0=entry_price, y1=stop_loss, fillcolor="red", opacity=0.15, row=1, col=1)
     
     # Add signal marker
     signal_time = signal.get('timestamp', data.index[-1])
