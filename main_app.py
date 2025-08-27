@@ -1053,17 +1053,64 @@ def create_signal_chart_with_levels(data, signal, symbol, interval):
     fig.add_hline(y=target, line=dict(color="green", width=2, dash="dash"), 
                   annotation_text=f"Target: {target:.4f}", row=1, col=1)
     
-    # Add colored zones
-    if signal['action'] == 'BUY':
-        # Green zone (profit area above entry)
-        fig.add_hrect(y0=entry_price, y1=target, fillcolor="green", opacity=0.1, row=1, col=1)
-        # Red zone (loss area below entry)
-        fig.add_hrect(y0=stop_loss, y1=entry_price, fillcolor="red", opacity=0.1, row=1, col=1)
-    else:
-        # Green zone (profit area below entry)
-        fig.add_hrect(y0=target, y1=entry_price, fillcolor="green", opacity=0.1, row=1, col=1)
-        # Red zone (loss area above entry)
-        fig.add_hrect(y0=entry_price, y1=stop_loss, fillcolor="red", opacity=0.1, row=1, col=1)
+    # Add colored zones only from signal generation time forward
+    signal_time = signal.get('timestamp', data.index[-1])
+    
+    # Find the signal time in the data index
+    try:
+        if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+            signal_time = signal_time.replace(tzinfo=None)
+        
+        # Get data from signal time forward
+        future_data = data[data.index >= signal_time]
+        
+        if len(future_data) > 0:
+            start_time = future_data.index[0]
+            end_time = data.index[-1]
+            
+            # Add colored zones only for the period after signal generation
+            if signal['action'] == 'BUY':
+                # Green zone (profit area above entry) - from signal time forward
+                fig.add_shape(
+                    type="rect",
+                    x0=start_time, x1=end_time,
+                    y0=entry_price, y1=target,
+                    fillcolor="green", opacity=0.15,
+                    layer="below", line_width=0,
+                    row=1, col=1
+                )
+                # Red zone (loss area below entry) - from signal time forward
+                fig.add_shape(
+                    type="rect",
+                    x0=start_time, x1=end_time,
+                    y0=stop_loss, y1=entry_price,
+                    fillcolor="red", opacity=0.15,
+                    layer="below", line_width=0,
+                    row=1, col=1
+                )
+            else:
+                # Green zone (profit area below entry) - from signal time forward
+                fig.add_shape(
+                    type="rect",
+                    x0=start_time, x1=end_time,
+                    y0=target, y1=entry_price,
+                    fillcolor="green", opacity=0.15,
+                    layer="below", line_width=0,
+                    row=1, col=1
+                )
+                # Red zone (loss area above entry) - from signal time forward
+                fig.add_shape(
+                    type="rect",
+                    x0=start_time, x1=end_time,
+                    y0=entry_price, y1=stop_loss,
+                    fillcolor="red", opacity=0.15,
+                    layer="below", line_width=0,
+                    row=1, col=1
+                )
+    except Exception as e:
+        print(f"Error adding colored zones: {str(e)}")
+        # Fallback to full chart coloring if timestamp matching fails
+        pass
     
     # Add signal marker
     signal_time = signal.get('timestamp', data.index[-1])
