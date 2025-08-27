@@ -861,12 +861,30 @@ def main():
                     symbols = screener.get_liquid_stocks()[:10]  # Load more stocks
                     market_data_key = 'stock_market_data'
                 
+                signals_key = 'crypto_signals' if st.session_state.market_type == 'crypto' else 'stock_signals'
+                
                 for symbol in symbols:
                     try:
                         data = data_fetcher.get_intraday_data(symbol, period='1d', interval='5m')
                         if data is not None and len(data) > 0:
                             data_with_indicators = strategies.add_technical_indicators(data)
                             st.session_state[market_data_key][symbol] = data_with_indicators
+                            
+                            # Generate signals for initial load
+                            basic_signals = strategies.generate_signals(data_with_indicators, symbol)
+                            advanced_signals = st.session_state.advanced_strategies.generate_advanced_signals(data_with_indicators, symbol)
+                            all_signals = basic_signals + advanced_signals
+                            
+                            # Add signals to session state
+                            for signal in all_signals:
+                                if not any(s['symbol'] == signal['symbol'] and 
+                                         s['timestamp'] == signal['timestamp'] and
+                                         s['action'] == signal['action'] 
+                                         for s in st.session_state[signals_key]):
+                                    signal['market_type'] = st.session_state.market_type
+                                    signal['trading_style'] = st.session_state.trading_style
+                                    st.session_state[signals_key].append(signal)
+                            
                     except Exception as e:
                         st.error(f"Error loading {symbol}: {str(e)}")
                         continue
@@ -890,6 +908,13 @@ def main():
     st.sidebar.subheader("🤖 Auto Trading")
     auto_trade_enabled = st.sidebar.checkbox("Auto Execute High Confidence (≥90%)", value=True)
     st.sidebar.info("📊 Only signals with ≥90% confidence are shown and auto-traded")
+    
+    # Manual refresh button for signals
+    if st.sidebar.button("🔄 Refresh Signals Now", help="Force update market data and generate new signals"):
+        with st.spinner("Refreshing market data and generating signals..."):
+            update_market_data()
+        st.success("✅ Signals updated!")
+        st.rerun()
     
     if auto_trade_enabled and st.session_state.get('db_connected', False):
         # Show auto-trade summary
