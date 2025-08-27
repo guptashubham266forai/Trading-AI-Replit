@@ -20,7 +20,12 @@ class AdvancedTradingStrategies:
     
     def add_advanced_indicators(self, data):
         """Add advanced technical indicators"""
-        if len(data) < 100:
+        if len(data) < 20:  # Lower minimum requirement
+            # Still add basic columns for small datasets
+            data['Higher_High'] = pd.Series([False] * len(data), index=data.index)
+            data['Higher_Low'] = pd.Series([False] * len(data), index=data.index)
+            data['Lower_High'] = pd.Series([False] * len(data), index=data.index)
+            data['Lower_Low'] = pd.Series([False] * len(data), index=data.index)
             return data
         
         # Volume-weighted indicators
@@ -94,81 +99,109 @@ class AdvancedTradingStrategies:
     def detect_higher_highs(self, data, lookback=5):
         """Detect higher highs pattern"""
         try:
-            highs = data['High']
+            if len(data) < lookback + 1:
+                return pd.Series([False] * len(data), index=data.index)
+                
+            highs = data['High'].values
             higher_highs = []
             
             for i in range(lookback, len(highs)):
-                current_high = highs.iloc[i]
-                prev_peak = highs.iloc[i-lookback:i].max()
-                
-                if current_high > prev_peak:
-                    higher_highs.append(True)
+                current_high = highs[i]
+                prev_section = highs[i-lookback:i]
+                if len(prev_section) > 0:
+                    prev_peak = np.max(prev_section)
+                    if current_high > prev_peak:
+                        higher_highs.append(True)
+                    else:
+                        higher_highs.append(False)
                 else:
                     higher_highs.append(False)
             
             result = [False] * lookback + higher_highs
             return pd.Series(result, index=data.index)
-        except Exception:
+        except Exception as e:
+            print(f"Warning in detect_higher_highs: {str(e)}")
             return pd.Series([False] * len(data), index=data.index)
     
     def detect_higher_lows(self, data, lookback=5):
         """Detect higher lows pattern"""
         try:
-            lows = data['Low']
+            if len(data) < lookback + 1:
+                return pd.Series([False] * len(data), index=data.index)
+                
+            lows = data['Low'].values
             higher_lows = []
             
             for i in range(lookback, len(lows)):
-                current_low = lows.iloc[i]
-                prev_trough = lows.iloc[i-lookback:i].min()
-                
-                if current_low > prev_trough:
-                    higher_lows.append(True)
+                current_low = lows[i]
+                prev_section = lows[i-lookback:i]
+                if len(prev_section) > 0:
+                    prev_trough = np.min(prev_section)
+                    if current_low > prev_trough:
+                        higher_lows.append(True)
+                    else:
+                        higher_lows.append(False)
                 else:
                     higher_lows.append(False)
             
             result = [False] * lookback + higher_lows
             return pd.Series(result, index=data.index)
-        except Exception:
+        except Exception as e:
+            print(f"Warning in detect_higher_lows: {str(e)}")
             return pd.Series([False] * len(data), index=data.index)
     
     def detect_lower_highs(self, data, lookback=5):
         """Detect lower highs pattern"""
         try:
-            highs = data['High']
+            if len(data) < lookback + 1:
+                return pd.Series([False] * len(data), index=data.index)
+                
+            highs = data['High'].values
             lower_highs = []
             
             for i in range(lookback, len(highs)):
-                current_high = highs.iloc[i]
-                prev_peak = highs.iloc[i-lookback:i].max()
-                
-                if current_high < prev_peak:
-                    lower_highs.append(True)
+                current_high = highs[i]
+                prev_section = highs[i-lookback:i]
+                if len(prev_section) > 0:
+                    prev_peak = np.max(prev_section)
+                    if current_high < prev_peak:
+                        lower_highs.append(True)
+                    else:
+                        lower_highs.append(False)
                 else:
                     lower_highs.append(False)
             
             result = [False] * lookback + lower_highs
             return pd.Series(result, index=data.index)
-        except Exception:
+        except Exception as e:
+            print(f"Warning in detect_lower_highs: {str(e)}")
             return pd.Series([False] * len(data), index=data.index)
     
     def detect_lower_lows(self, data, lookback=5):
         """Detect lower lows pattern"""
         try:
-            lows = data['Low']
+            if len(data) < lookback + 1:
+                return pd.Series([False] * len(data), index=data.index)
+                
+            lows = data['Low'].values
             lower_lows = []
             
             for i in range(lookback, len(lows)):
-                current_low = lows.iloc[i]
-                prev_trough = lows.iloc[i-lookback:i].min()
-                
-                if current_low < prev_trough:
-                    lower_lows.append(True)
+                current_low = lows[i]
+                prev_section = lows[i-lookback:i]
+                if len(prev_section) > 0:
+                    prev_trough = np.min(prev_section)
+                    if current_low < prev_trough:
+                        lower_lows.append(True)
+                    else:
+                        lower_lows.append(False)
                 else:
                     lower_lows.append(False)
             
             result = [False] * lookback + lower_lows
             return pd.Series(result, index=data.index)
-        except Exception:
+        except Exception as e:
+            print(f"Warning in detect_lower_lows: {str(e)}")
             return pd.Series([False] * len(data), index=data.index)
     
     def detect_hammer(self, data):
