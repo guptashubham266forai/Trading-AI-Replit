@@ -1372,6 +1372,51 @@ def main():
             update_market_data()
         st.rerun()
     
+    # DIRECT SIGNAL GENERATION - BYPASS ALL CONDITIONS
+    if st.sidebar.button("⚡ FORCE GENERATE SIGNALS"):
+        st.sidebar.success("Forcing signal generation...")
+        
+        # Direct signal generation without conditions
+        try:
+            from crypto_data_fetcher import CryptoDataFetcher
+            from strategies import TradingStrategies
+            from advanced_strategies import AdvancedTradingStrategies
+            
+            crypto_fetcher = CryptoDataFetcher()
+            strategies = TradingStrategies()
+            advanced_strategies = AdvancedTradingStrategies()
+            
+            # Get one crypto symbol and force generate signals
+            test_symbol = "BTC-USD"
+            data = crypto_fetcher.get_intraday_data(test_symbol, period="1d", interval="5m")
+            
+            if data is not None and len(data) > 20:
+                # Add indicators
+                data_with_indicators = strategies.add_technical_indicators(data)
+                
+                # Generate signals
+                basic_signals = strategies.generate_signals(data_with_indicators, test_symbol)
+                advanced_signals = advanced_strategies.generate_advanced_signals(data_with_indicators, test_symbol)
+                
+                all_signals = basic_signals + advanced_signals
+                
+                # Force add to session state
+                if 'crypto_signals' not in st.session_state:
+                    st.session_state.crypto_signals = []
+                
+                for signal in all_signals:
+                    signal['market_type'] = 'crypto'
+                    signal['trading_style'] = 'intraday'
+                    st.session_state.crypto_signals.append(signal)
+                
+                st.sidebar.success(f"✅ Generated {len(all_signals)} signals!")
+                st.rerun()
+            else:
+                st.sidebar.error("Could not get data for signal generation")
+                
+        except Exception as e:
+            st.sidebar.error(f"Error: {str(e)}")
+    
     # Auto-refresh logic
     if auto_refresh:
         current_time = datetime.now()
