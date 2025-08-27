@@ -466,9 +466,9 @@ def display_trading_signals():
     with col1:
         confidence_filter = st.slider(
             "Minimum Confidence Level (%)",
-            min_value=50,
+            min_value=0,
             max_value=100,
-            value=70,
+            value=0,
             step=5,
             help="Filter signals by minimum confidence level"
         )
