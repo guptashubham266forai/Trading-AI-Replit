@@ -723,6 +723,12 @@ def main():
     # Market and trading style selection
     display_market_selection()
     
+    # Initial data loading
+    current_data = get_current_market_data()
+    if not current_data:
+        with st.spinner(f"Loading {st.session_state.market_type} market data..."):
+            update_market_data()
+    
     # Configuration sidebar
     st.sidebar.header("⚙️ Strategy Configuration")
     
