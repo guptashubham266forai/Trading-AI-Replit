@@ -605,7 +605,7 @@ def display_trading_signals():
             st.write(f"**Time:** {time_str}")
             
             # Add chart visualization button
-            if st.button(f"📊 View Chart", key=f"chart_{i}"):
+            if st.button(f"📊 View Signal Chart", key=f"chart_{i}"):
                 # Get current market data for this symbol
                 current_data = get_current_market_data()
                 symbol = signal['symbol']
@@ -613,12 +613,16 @@ def display_trading_signals():
                 if current_data and symbol in current_data:
                     chart_data = current_data[symbol]
                     
-                    # Generate mini chart for this signal
+                    # Generate enhanced mini chart for this signal
                     mini_chart = st.session_state.chart_generator.create_mini_chart(
-                        chart_data, signal, symbol, height=350
+                        chart_data, signal, symbol, height=500
                     )
                     
                     if mini_chart:
+                        st.info(f"📊 **Signal Analysis for {symbol.replace('.NS', '').replace('-USD', '')}**")
+                        st.write("🟢 **Green Zone**: Target/Profit area")  
+                        st.write("🔴 **Red Zone**: Stop Loss/Risk area")
+                        st.write("📍 **White Line**: Entry point")
                         st.plotly_chart(mini_chart, use_container_width=True)
                     else:
                         st.error("Unable to generate chart")

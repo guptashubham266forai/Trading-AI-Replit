@@ -72,8 +72,9 @@ class SignalChartGenerator:
             # Add signal markers
             self.add_signal_markers(fig, chart_data, signal)
             
-            # Add price levels (entry, stop loss, target)
-            self.add_price_levels(fig, chart_data, signal)
+            # Add enhanced zones and price levels
+            self.add_enhanced_zones(fig, chart_data, signal)
+            self.add_enhanced_price_levels(fig, chart_data, signal)
             
             # Update layout
             fig.update_layout(
@@ -324,14 +325,113 @@ class SignalChartGenerator:
                     row=1, col=1
                 )
     
+    def add_enhanced_zones(self, fig, data, signal):
+        """Add enhanced visual zones for entry, stop loss (red), and target (green)"""
+        entry_price = signal.get('price', data['Close'].iloc[-1])
+        stop_loss = signal.get('stop_loss')
+        target = signal.get('target')
+        
+        if not stop_loss or not target:
+            return
+        
+        x_range = [data.index[0], data.index[-1]]
+        
+        if signal['action'] == 'BUY':
+            # Profit zone (green) - above entry price
+            fig.add_shape(
+                type="rect",
+                x0=data.index[0], x1=data.index[-1],
+                y0=entry_price, y1=target,
+                fillcolor="rgba(76, 175, 80, 0.15)",
+                layer="below",
+                line_width=0
+            )
+            # Risk zone (red) - below entry price  
+            fig.add_shape(
+                type="rect",
+                x0=data.index[0], x1=data.index[-1],
+                y0=stop_loss, y1=entry_price,
+                fillcolor="rgba(244, 67, 54, 0.15)",
+                layer="below",
+                line_width=0
+            )
+        else:  # SELL signal
+            # Profit zone (green) - below entry price
+            fig.add_shape(
+                type="rect",
+                x0=data.index[0], x1=data.index[-1],
+                y0=target, y1=entry_price,
+                fillcolor="rgba(76, 175, 80, 0.15)",
+                layer="below",
+                line_width=0
+            )
+            # Risk zone (red) - above entry price
+            fig.add_shape(
+                type="rect",
+                x0=data.index[0], x1=data.index[-1],
+                y0=entry_price, y1=stop_loss,
+                fillcolor="rgba(244, 67, 54, 0.15)",
+                layer="below",
+                line_width=0
+            )
+    
+    def add_enhanced_price_levels(self, fig, data, signal):
+        """Add enhanced price level lines with better visibility"""
+        entry_price = signal.get('price', data['Close'].iloc[-1])
+        stop_loss = signal.get('stop_loss')
+        target = signal.get('target')
+        
+        x_range = [data.index[0], data.index[-1]]
+        
+        # Entry price line (thicker, white)
+        fig.add_trace(
+            go.Scatter(
+                x=x_range,
+                y=[entry_price, entry_price],
+                mode='lines',
+                name=f"📍 Entry: {entry_price:.2f}",
+                line=dict(color='white', width=3, dash='solid'),
+                hovertemplate=f"Entry Price: {entry_price:.2f}<extra></extra>"
+            )
+        )
+        
+        # Stop loss line (red, thicker)
+        if stop_loss:
+            fig.add_trace(
+                go.Scatter(
+                    x=x_range,
+                    y=[stop_loss, stop_loss],
+                    mode='lines',
+                    name=f"🔴 Stop Loss: {stop_loss:.2f}",
+                    line=dict(color='#ff4444', width=3, dash='dash'),
+                    hovertemplate=f"Stop Loss: {stop_loss:.2f}<extra></extra>"
+                )
+            )
+        
+        # Target line (green, thicker)
+        if target:
+            fig.add_trace(
+                go.Scatter(
+                    x=x_range,
+                    y=[target, target],
+                    mode='lines',
+                    name=f"🟢 Target: {target:.2f}",
+                    line=dict(color='#00ff88', width=3, dash='dot'),
+                    hovertemplate=f"Target: {target:.2f}<extra></extra>"
+                )
+            )
+    
     def create_mini_chart(self, data, signal, symbol, height=400):
-        """Create a smaller chart for signal display"""
+        """Create a smaller chart for signal display with enhanced visual zones"""
         try:
             # Take last 50 candles for mini chart
             chart_data = data.tail(50).copy()
             
             # Create simple candlestick chart
             fig = go.Figure()
+            
+            # Add background zones first (behind candlesticks)
+            self.add_enhanced_zones(fig, chart_data, signal)
             
             # Add candlestick
             fig.add_trace(
@@ -349,7 +449,7 @@ class SignalChartGenerator:
             
             # Add signal point and price levels
             self.add_signal_markers(fig, chart_data, signal)
-            self.add_price_levels(fig, chart_data, signal)
+            self.add_enhanced_price_levels(fig, chart_data, signal)
             
             # Add key indicators
             if 'VWAP' in chart_data.columns:
@@ -365,13 +465,21 @@ class SignalChartGenerator:
             
             # Update layout for mini chart
             fig.update_layout(
-                title=f"{symbol.replace('.NS', '').replace('-USD', '')} - {signal['action']}",
+                title=f"{symbol.replace('.NS', '').replace('-USD', '')} - {signal['action']} Signal Analysis",
                 xaxis_rangeslider_visible=False,
                 height=height,
-                showlegend=False,
+                showlegend=True,
                 template="plotly_dark",
-                font=dict(size=8),
-                margin=dict(l=20, r=20, t=40, b=20)
+                font=dict(size=9),
+                margin=dict(l=20, r=20, t=50, b=20),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    font=dict(size=8)
+                )
             )
             
             fig.update_xaxes(showgrid=False)
