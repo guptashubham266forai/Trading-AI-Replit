@@ -695,11 +695,12 @@ def create_signals_table(filtered_signals):
                 cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
                 
                 with cols[0]:
-                    # Fix single-click issue with proper session state handling
-                    chart_key = f"chart_{row['Symbol']}_{i}"
+                    # Fix chart display lag by forcing immediate update
+                    chart_key = f"chart_{row['Symbol']}_{i}_{row['Index']}"
                     if st.button("📊", key=chart_key, help="View detailed chart"):
-                        # Set the signal without rerun to prevent double-click
+                        # Set the signal and force immediate refresh
                         st.session_state.selected_signal = row['original_signal']
+                        st.rerun()
 
                 with cols[1]:
                     st.markdown(f"**{row['Symbol']}**")
