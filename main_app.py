@@ -17,10 +17,11 @@ from stock_screener import StockScreener
 from crypto_screener import CryptoScreener
 from predictive_analysis import PredictiveAnalysis
 from swing_strategies import SwingTradingStrategies
-from database import DatabaseManager
-from performance_analyzer import PerformanceAnalyzer
-from auto_trader import AutoTrader
-from live_tracker import LiveTracker
+# Database components temporarily disabled during migration
+# from database import DatabaseManager
+# from performance_analyzer import PerformanceAnalyzer
+# from auto_trader import AutoTrader
+# from live_tracker import LiveTracker
 from utils import format_currency, calculate_risk_reward
 
 # Page configuration
@@ -100,21 +101,16 @@ def initialize_session_state():
         st.session_state.db_connected = False
     
     if 'performance_analyzer' not in st.session_state:
-        if st.session_state.get('db_connected', False):
-            st.session_state.performance_analyzer = PerformanceAnalyzer()
-        else:
-            st.session_state.performance_analyzer = None
+        # Database components disabled during migration
+        st.session_state.performance_analyzer = None
     
     # Auto-trader for high confidence signals (temporarily disabled)
     if 'auto_trader' not in st.session_state:
         st.session_state.auto_trader = None
     
-    # Live tracker for real-time P&L
+    # Live tracker for real-time P&L (disabled during migration)
     if 'live_tracker' not in st.session_state:
-        if st.session_state.get('db_connected', False):
-            st.session_state.live_tracker = LiveTracker(st.session_state.db_manager)
-        else:
-            st.session_state.live_tracker = None
+        st.session_state.live_tracker = None
 
 def get_current_data_fetcher():
     """Get the appropriate data fetcher based on selected market"""
@@ -309,7 +305,7 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 row=4, col=1
             )
             # Add Stochastic reference lines
-            current_shapes = fig.layout.shapes or []
+            current_shapes = list(fig.layout.shapes) if fig.layout.shapes else []
             fig.update_layout(
                 shapes=current_shapes + [
                     dict(type="line", x0=0, x1=1, y0=80, y1=80,
@@ -326,7 +322,7 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 row=4, col=1
             )
             # Add Williams %R reference lines
-            current_shapes = fig.layout.shapes or []
+            current_shapes = list(fig.layout.shapes) if fig.layout.shapes else []
             fig.update_layout(
                 shapes=current_shapes + [
                     dict(type="line", x0=0, x1=1, y0=-20, y1=-20,
