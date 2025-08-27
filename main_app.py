@@ -870,52 +870,37 @@ def display_signal_chart_inline():
             st.session_state.selected_signal = None
             st.rerun()
     
-    # Auto-refresh mechanism
-    if auto_refresh:
-        # Add auto-refresh with placeholder that updates every 5 seconds
-        chart_placeholder = st.empty()
-        metrics_placeholder = st.empty()
+    # Load and display chart with smooth updates
+    chart_data = load_chart_data(symbol, interval, time_range)
+    
+    if chart_data is not None and len(chart_data) > 0:
+        # Create enhanced chart with signal markers
+        chart = create_signal_chart_with_levels(chart_data, signal, clean_symbol, interval)
         
-        # Load and display chart with auto-refresh
-        with chart_placeholder.container():
-            chart_data = load_chart_data(symbol, interval, time_range)
-            
-            if chart_data is not None and len(chart_data) > 0:
-                # Create enhanced chart with signal markers
-                chart = create_signal_chart_with_levels(chart_data, signal, clean_symbol, interval)
-                
-                if chart:
-                    st.plotly_chart(chart, use_container_width=True, key=f"chart_{symbol}_{int(time.time())}")
-                else:
-                    st.error("Unable to create chart")
+        if chart:
+            # Use auto-refresh for the chart if enabled
+            if auto_refresh:
+                st.plotly_chart(chart, use_container_width=True, key=f"live_chart_{symbol.replace('-', '_').replace('.', '_')}")
             else:
-                st.warning(f"No data available for {clean_symbol}")
-        
-        # Display real-time metrics with auto-refresh
-        with metrics_placeholder.container():
-            if chart_data is not None and len(chart_data) > 0:
-                display_signal_metrics(chart_data, signal)
-        
-        # Auto-refresh every 5 seconds
-        time.sleep(0.1)  # Small delay to prevent too frequent updates
-        st.rerun()
-    else:
-        # Manual refresh mode
-        chart_data = load_chart_data(symbol, interval, time_range)
-        
-        if chart_data is not None and len(chart_data) > 0:
-            # Create enhanced chart with signal markers
-            chart = create_signal_chart_with_levels(chart_data, signal, clean_symbol, interval)
-            
-            if chart:
                 st.plotly_chart(chart, use_container_width=True)
-                
-                # Display real-time metrics
-                display_signal_metrics(chart_data, signal)
-            else:
-                st.error("Unable to create chart")
+            
+            # Display real-time metrics
+            display_signal_metrics(chart_data, signal)
         else:
-            st.warning(f"No data available for {clean_symbol}")
+            st.error("Unable to create chart")
+    else:
+        st.warning(f"No data available for {clean_symbol}")
+    
+    # Smooth auto-refresh using session state
+    if auto_refresh:
+        # Use session state to track refresh timing
+        if 'last_chart_refresh' not in st.session_state:
+            st.session_state.last_chart_refresh = time.time()
+        
+        current_time = time.time()
+        if current_time - st.session_state.last_chart_refresh >= 10:  # Refresh every 10 seconds
+            st.session_state.last_chart_refresh = current_time
+            st.rerun()
 
 def load_chart_data(symbol, interval, time_range):
     """Load chart data with specified interval and range"""
