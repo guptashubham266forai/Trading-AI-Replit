@@ -1527,9 +1527,14 @@ def update_market_data():
             last_update_key = 'stock_last_update'
         
         # Update data for swing trading (longer timeframe)
-        # Get data interval from session state (set by sidebar selector)
-        data_interval = st.session_state.get('data_interval', '5m')
-        period = '5d' if data_interval in ['1m', '5m'] else '1d'
+        # Get data interval from session state (set by sidebar selector) with fallback
+        if st.session_state.trading_style == 'swing':
+            data_interval = st.session_state.get('data_interval', '1h')
+            period = '5d'
+        else:
+            data_interval = st.session_state.get('data_interval', '5m')
+            period = '5d' if data_interval in ['1m', '5m'] else '1d'
+        
         interval = data_interval
         
         # Use fast batch fetching for crypto prices (much faster)
@@ -1707,7 +1712,10 @@ def main():
                 
                 # Get Bitcoin data and force generate signals
                 test_symbol = "BTC-USD"
-                data = crypto_fetcher.get_intraday_data(test_symbol, period="1d", interval="5m")
+                # Use session state interval or default
+                test_interval = st.session_state.get('data_interval', '5m')
+                test_period = '5d' if test_interval in ['1m', '5m'] else '1d'
+                data = crypto_fetcher.get_intraday_data(test_symbol, period=test_period, interval=test_interval)
                 
                 if data is not None and len(data) > 20:
                     # Add indicators and generate signals
@@ -1763,6 +1771,7 @@ def main():
                 for symbol in symbols:
                     try:
                         # Use selected interval for data fetching
+                        data_interval = st.session_state.get('data_interval', '5m')
                         period = '5d' if data_interval in ['1m', '5m'] else '1d'
                         data = data_fetcher.get_intraday_data(symbol, period=period, interval=data_interval)
                         if data is not None and len(data) > 0:
@@ -2326,7 +2335,10 @@ def main():
             
             # Get one crypto symbol and force generate signals
             test_symbol = "BTC-USD"
-            data = crypto_fetcher.get_intraday_data(test_symbol, period="1d", interval="5m")
+            # Use session state interval or default
+            test_interval = st.session_state.get('data_interval', '5m')
+            test_period = '5d' if test_interval in ['1m', '5m'] else '1d'
+            data = crypto_fetcher.get_intraday_data(test_symbol, period=test_period, interval=test_interval)
             
             if data is not None and len(data) > 20:
                 # Add indicators
