@@ -470,7 +470,8 @@ def display_trading_signals():
             max_value=100,
             value=0,
             step=5,
-            help="Filter signals by minimum confidence level"
+            help="Filter signals by minimum confidence level",
+            key="trading_signals_confidence_filter"
         )
     
     with col2:
@@ -478,7 +479,8 @@ def display_trading_signals():
             "Show Count",
             options=[6, 9, 12, 15],
             index=1,
-            help="Number of signals to display"
+            help="Number of signals to display",
+            key="trading_signals_show_count"
         )
     
     with col3:
@@ -486,7 +488,8 @@ def display_trading_signals():
             "Sort By",
             options=["Confidence", "Time", "Risk:Reward"],
             index=0,
-            help="Sort signals by selected criteria"
+            help="Sort signals by selected criteria",
+            key="trading_signals_sort_option"
         )
     
     print(f"🔧 DEBUG: Checking signals display. Raw signals count: {len(signals) if signals else 0}")
