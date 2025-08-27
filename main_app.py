@@ -901,8 +901,9 @@ def main():
     # Audio notification controls
     audio_enabled = st.session_state.audio_notifications.create_notification_controls()
     
-    # Auto-refresh settings
-    auto_refresh = st.sidebar.checkbox("Auto Refresh", value=True)
+    # Auto-refresh settings - Enhanced for real-time trading
+    st.sidebar.subheader("🔄 Auto Refresh")
+    auto_refresh = st.sidebar.checkbox("Auto Refresh", value=True, help="Automatically check for new signals every 2-5 minutes")
     
     # Auto-trader settings
     st.sidebar.subheader("🤖 Auto Trading")
@@ -1534,21 +1535,40 @@ def main():
             import traceback
             print(f"🔧 TRACEBACK: {traceback.format_exc()}")
     
-    # Auto-refresh logic
+    # Auto-refresh logic - More aggressive for real-time signals
     if auto_refresh:
         current_time = datetime.now()
         should_refresh = False
         
+        # Get current signal count to detect new signals
+        current_signals = get_current_signals()
+        signal_count = len(current_signals) if current_signals else 0
+        
+        # Check if this is first load or time-based refresh
         if last_update is None:
             should_refresh = True
         else:
             time_diff = (current_time - last_update).total_seconds()
-            if time_diff > refresh_interval * 60:
+            # Refresh more frequently for active trading (every 2 minutes instead of user setting)
+            if time_diff > max(120, refresh_interval * 60):  # At least every 2 minutes
                 should_refresh = True
         
+        # Also check for significant market volatility or new potential signals
         if should_refresh:
-            with st.spinner("Auto-refreshing market data..."):
+            # Get fresh signals count before update
+            old_signal_count = signal_count
+            
+            with st.spinner("🔄 Auto-updating signals..."):
                 update_market_data()
+            
+            # Check if we got new qualifying signals
+            new_signals = get_current_signals()
+            new_count = len(new_signals) if new_signals else 0
+            
+            if new_count > old_signal_count:
+                st.sidebar.success(f"✨ {new_count - old_signal_count} new signals!")
+                st.success(f"🚨 {new_count - old_signal_count} new high-confidence signals detected and meet your filter criteria!")
+            
             st.rerun()
     
     # DISABLED auto-refresh loop to prevent signal clearing
