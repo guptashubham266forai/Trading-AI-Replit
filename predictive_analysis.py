@@ -10,14 +10,15 @@ class PredictiveAnalysis:
     def __init__(self):
         self.indicators = TechnicalIndicators()
         
-    def detect_accumulation_distribution(self, data):
+    def detect_accumulation_distribution(self, data, periods=20):
         """Detect institutional accumulation/distribution patterns"""
-        if len(data) < 20:
+        if len(data) < periods:
             return None
             
         # Price vs Volume divergence analysis
-        price_trend = data['Close'].pct_change(10).iloc[-1]
-        volume_trend = (data['Volume'].tail(10).mean() / data['Volume'].tail(20).mean()) - 1
+        lookback = min(periods//2, 10)
+        price_trend = data['Close'].pct_change(lookback).iloc[-1]
+        volume_trend = (data['Volume'].tail(lookback).mean() / data['Volume'].tail(periods).mean()) - 1
         
         # Accumulation: Price steady/up + Volume increasing
         if price_trend >= -0.02 and volume_trend > 0.2:
@@ -39,21 +40,21 @@ class PredictiveAnalysis:
         
         return None
     
-    def detect_pre_breakout_setup(self, data):
+    def detect_pre_breakout_setup(self, data, periods=20):
         """Detect stocks ready for breakout before it happens"""
         setups = []
         
-        if len(data) < 50:
+        if len(data) < periods:
             return setups
         
         current_price = data['Close'].iloc[-1]
-        volume_avg = data['Volume'].tail(20).mean()
+        volume_avg = data['Volume'].tail(periods).mean()
         current_volume = data['Volume'].iloc[-1]
         
         # Bollinger Band Squeeze
         if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns:
             bb_width = (data['BB_Upper'].iloc[-1] - data['BB_Lower'].iloc[-1]) / current_price
-            bb_width_avg = ((data['BB_Upper'] - data['BB_Lower']) / data['Close']).tail(20).mean()
+            bb_width_avg = ((data['BB_Upper'] - data['BB_Lower']) / data['Close']).tail(periods).mean()
             
             if bb_width < bb_width_avg * 0.7:  # Squeeze detected
                 setups.append({
@@ -92,16 +93,17 @@ class PredictiveAnalysis:
         
         return setups
     
-    def detect_momentum_divergence(self, data):
+    def detect_momentum_divergence(self, data, periods=20):
         """Detect RSI/MACD divergence before price reversal"""
         divergences = []
         
-        if len(data) < 30 or 'RSI' not in data.columns:
+        if len(data) < periods or 'RSI' not in data.columns:
             return divergences
         
-        # Look for divergences in last 10 periods
-        price_data = data['Close'].tail(10)
-        rsi_data = data['RSI'].tail(10)
+        # Look for divergences in last periods
+        lookback = min(periods//2, 10)
+        price_data = data['Close'].tail(lookback)
+        rsi_data = data['RSI'].tail(lookback)
         
         # Find recent peaks and troughs
         price_peaks = self._find_peaks(price_data)
@@ -133,9 +135,9 @@ class PredictiveAnalysis:
         
         return divergences
     
-    def detect_smart_money_flow(self, data):
+    def detect_smart_money_flow(self, data, periods=20):
         """Detect institutional money flow patterns"""
-        if len(data) < 20:
+        if len(data) < periods:
             return None
         
         # Calculate money flow based on price and volume
@@ -143,8 +145,9 @@ class PredictiveAnalysis:
         money_flow = typical_price * data['Volume']
         
         # Compare recent vs historical
-        recent_flow = money_flow.tail(5).sum()
-        historical_flow = money_flow.tail(20).sum() / 4  # Average of 5-day periods
+        recent_periods = min(5, periods//4)
+        recent_flow = money_flow.tail(recent_periods).sum()
+        historical_flow = money_flow.tail(periods).sum() / (periods//recent_periods)  # Average periods
         
         flow_ratio = recent_flow / historical_flow if historical_flow > 0 else 1
         
@@ -173,22 +176,33 @@ class PredictiveAnalysis:
         
         return None
     
-    def predict_next_move(self, data, symbol):
+    def predict_next_move(self, data, symbol, timewindow='30min-2h'):
         """Comprehensive prediction combining all signals"""
         predictions = []
         
-        # Get all analysis results
-        accumulation = self.detect_accumulation_distribution(data)
-        breakout_setups = self.detect_pre_breakout_setup(data)
-        divergences = self.detect_momentum_divergence(data)
-        smart_money = self.detect_smart_money_flow(data)
+        # Adjust analysis based on timewindow
+        timeframe_map = {
+            '5-15min': {'periods': 5, 'timeframe': '5-15 minutes'},
+            '15-30min': {'periods': 10, 'timeframe': '15-30 minutes'}, 
+            '30min-2h': {'periods': 20, 'timeframe': '30 minutes - 2 hours'}
+        }
         
-        # Combine signals for overall prediction
+        analysis_params = timeframe_map.get(timewindow, timeframe_map['30min-2h'])
+        
+        # Get all analysis results with timewindow consideration
+        accumulation = self.detect_accumulation_distribution(data, analysis_params['periods'])
+        breakout_setups = self.detect_pre_breakout_setup(data, analysis_params['periods'])
+        divergences = self.detect_momentum_divergence(data, analysis_params['periods'])
+        smart_money = self.detect_smart_money_flow(data, analysis_params['periods'])
+        
+        # Collect supporting signal names
+        supporting_signal_names = []
         bullish_signals = 0
         bearish_signals = 0
         total_confidence = 0
         
         if accumulation:
+            supporting_signal_names.append(accumulation['pattern'])
             if accumulation['pattern'] == 'Accumulation':
                 bullish_signals += accumulation['confidence']
             else:
@@ -196,6 +210,7 @@ class PredictiveAnalysis:
             total_confidence += accumulation['confidence']
         
         for divergence in divergences:
+            supporting_signal_names.append(divergence['type'])
             if 'Bullish' in divergence['type']:
                 bullish_signals += divergence['confidence']
             else:
@@ -203,11 +218,15 @@ class PredictiveAnalysis:
             total_confidence += divergence['confidence']
         
         if smart_money:
+            supporting_signal_names.append(smart_money['pattern'])
             if 'Accumulation' in smart_money['pattern']:
                 bullish_signals += smart_money['confidence']
             else:
                 bearish_signals += smart_money['confidence']
             total_confidence += smart_money['confidence']
+        
+        for setup in breakout_setups:
+            supporting_signal_names.append(setup['type'])
         
         # Generate final prediction
         if total_confidence > 0:
@@ -227,9 +246,16 @@ class PredictiveAnalysis:
                 'symbol': symbol,
                 'direction': direction,
                 'probability': probability,
-                'timeframe': '30 minutes - 2 hours',
-                'supporting_signals': len([x for x in [accumulation, smart_money] if x]) + len(divergences) + len(breakout_setups),
-                'key_levels': self._calculate_key_levels(data)
+                'timeframe': analysis_params['timeframe'],
+                'supporting_signals': len(supporting_signal_names),
+                'supporting_signal_names': supporting_signal_names,
+                'key_levels': self._calculate_key_levels(data),
+                'detailed_analysis': {
+                    'accumulation': accumulation,
+                    'breakout_setups': breakout_setups,
+                    'divergences': divergences,
+                    'smart_money': smart_money
+                }
             })
         
         return {

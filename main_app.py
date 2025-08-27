@@ -950,17 +950,37 @@ def main():
                 st.write("• 3:1 risk-reward ratio")
 
     with tab4:
-        # Predictions tab (reuse existing prediction logic)
+        # Predictions tab with improved functionality
         st.header("🔮 Market Predictions")
+        
+        # Timewindow selection
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            timewindow = st.selectbox(
+                "Prediction Timeframe",
+                options=['5-15min', '15-30min', '30min-2h'],
+                index=2,
+                help="Select the timeframe for predictions"
+            )
+        
+        with col2:
+            max_predictions = st.selectbox(
+                "Show Predictions",
+                options=[3, 6, 9, 12],
+                index=1,
+                help="Number of predictions to display"
+            )
+        
         current_data = get_current_market_data()
         
         if current_data:
             predictions_data = []
             
-            for symbol, data in list(current_data.items())[:10]:
-                if data is not None and len(data) > 50:
+            for symbol, data in list(current_data.items())[:15]:
+                if data is not None and len(data) > 20:
                     try:
-                        prediction_result = st.session_state.predictor.predict_next_move(data, symbol)
+                        prediction_result = st.session_state.predictor.predict_next_move(data, symbol, timewindow)
                         if prediction_result['predictions']:
                             predictions_data.extend(prediction_result['predictions'])
                     except Exception as e:
@@ -969,9 +989,16 @@ def main():
             if predictions_data:
                 predictions_data.sort(key=lambda x: x['probability'], reverse=True)
                 
-                st.subheader("🚀 High-Probability Move Predictions")
+                st.subheader(f"🚀 High-Probability Move Predictions ({timewindow})")
                 
-                for i, pred in enumerate(predictions_data[:6]):
+                # Store detailed analysis in session state for details modal
+                if 'prediction_details' not in st.session_state:
+                    st.session_state.prediction_details = {}
+                
+                for i, pred in enumerate(predictions_data[:max_predictions]):
+                    # Store detailed analysis
+                    st.session_state.prediction_details[f"pred_{i}"] = pred.get('detailed_analysis', {})
+                    
                     col1, col2 = st.columns([3, 1])
                     
                     with col1:
@@ -986,19 +1013,84 @@ def main():
                         
                         st.write(f"**Probability:** {pred['probability']:.1f}%")
                         st.write(f"**Expected Timeframe:** {pred['timeframe']}")
-                        st.write(f"**Supporting Signals:** {pred['supporting_signals']}")
+                        
+                        # Show supporting signal names instead of count
+                        signal_names = pred.get('supporting_signal_names', [])
+                        if signal_names:
+                            st.write(f"**Supporting Signals ({len(signal_names)}):** {', '.join(signal_names)}")
+                        else:
+                            st.write(f"**Supporting Signals:** {pred['supporting_signals']}")
                     
                     with col2:
                         if st.button(f"📊 Details", key=f"pred_details_{i}"):
-                            st.info("Detailed analysis available in next update")
+                            # Show detailed analysis instead of placeholder
+                            st.session_state[f'show_details_{i}'] = True
+                    
+                    # Show detailed analysis if button was clicked
+                    if st.session_state.get(f'show_details_{i}', False):
+                        with st.expander(f"📊 Detailed Analysis for {symbol_display}", expanded=True):
+                            detailed = pred.get('detailed_analysis', {})
+                            
+                            if detailed.get('accumulation'):
+                                acc = detailed['accumulation']
+                                st.write(f"**🏦 {acc['pattern']}**")
+                                st.write(f"• Strength: {acc.get('strength', 0):.1f}%")
+                                st.write(f"• Prediction: {acc['prediction']}")
+                                st.write(f"• Confidence: {acc['confidence']:.1%}")
+                            
+                            if detailed.get('smart_money'):
+                                sm = detailed['smart_money']
+                                st.write(f"**💰 {sm['pattern']}**")
+                                st.write(f"• Signal: {sm['signal']}")
+                                st.write(f"• Prediction: {sm['prediction']}")
+                                st.write(f"• Timeframe: {sm['timeframe']}")
+                                st.write(f"• Confidence: {sm['confidence']:.1%}")
+                            
+                            if detailed.get('divergences'):
+                                for div in detailed['divergences']:
+                                    st.write(f"**⚡ {div['type']}**")
+                                    st.write(f"• Signal: {div['signal']}")
+                                    st.write(f"• Prediction: {div['prediction']}")
+                                    st.write(f"• Target Move: {div['target_move']}")
+                                    st.write(f"• Confidence: {div['confidence']:.1%}")
+                            
+                            if detailed.get('breakout_setups'):
+                                for setup in detailed['breakout_setups']:
+                                    st.write(f"**🚀 {setup['type']}**")
+                                    st.write(f"• Signal: {setup['signal']}")
+                                    st.write(f"• Probability: {setup['probability']:.1%}")
+                                    st.write(f"• Timeframe: {setup['timeframe']}")
+                            
+                            # Key levels
+                            key_levels = pred.get('key_levels', {})
+                            if key_levels:
+                                st.write(f"**🎯 Key Levels**")
+                                if st.session_state.market_type == 'crypto':
+                                    st.write(f"• Current Price: ${key_levels.get('current_price', 0):.4f}")
+                                    st.write(f"• Resistance: ${key_levels.get('resistance', 0):.4f}")
+                                    st.write(f"• Support: ${key_levels.get('support', 0):.4f}")
+                                    st.write(f"• VWAP: ${key_levels.get('vwap', 0):.4f}")
+                                else:
+                                    st.write(f"• Current Price: ₹{key_levels.get('current_price', 0):.2f}")
+                                    st.write(f"• Resistance: ₹{key_levels.get('resistance', 0):.2f}")
+                                    st.write(f"• Support: ₹{key_levels.get('support', 0):.2f}")
+                                    st.write(f"• VWAP: ₹{key_levels.get('vwap', 0):.2f}")
+                            
+                            if st.button(f"❌ Close Details", key=f"close_details_{i}"):
+                                st.session_state[f'show_details_{i}'] = False
+                                st.rerun()
                     
                     st.write("---")
             else:
                 st.info("No high-probability predictions detected at the moment.")
+                st.write("**Tips for better predictions:**")
+                st.write("• Predictions work best during active market hours")
+                st.write("• Try different timeframes (shorter timeframes may show more signals)")
+                st.write("• Ensure market has sufficient volatility for pattern detection")
         else:
             st.info("Loading market data for predictions...")
     
-    with tab4:
+    with tab5:
         st.subheader("Individual Instrument Analysis")
         
         current_data = get_current_market_data()
