@@ -1389,15 +1389,20 @@ def main():
                 update_market_data()
             st.rerun()
     
-    # Initial data load
+    # Initial data load - FORCE update for debugging
     current_data = get_current_market_data()
-    if not current_data:
-        print("🔧 DEBUG: No current data found, loading initial data")
-        with st.spinner("Loading initial market data..."):
+    
+    # Force update if no data OR no signals exist
+    signals_key = 'crypto_signals' if st.session_state.market_type == 'crypto' else 'stock_signals'
+    current_signals = st.session_state.get(signals_key, [])
+    
+    if not current_data or len(current_signals) == 0:
+        print(f"🔧 DEBUG: Forcing data update - Data: {len(current_data) if current_data else 0}, Signals: {len(current_signals)}")
+        with st.spinner("Loading/refreshing market data..."):
             update_market_data()
         st.rerun()
     else:
-        print(f"🔧 DEBUG: Current data exists: {len(current_data)} instruments")
+        print(f"🔧 DEBUG: Current data exists: {len(current_data)} instruments, {len(current_signals)} signals")
 
 if __name__ == "__main__":
     main()
