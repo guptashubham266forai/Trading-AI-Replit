@@ -99,8 +99,15 @@ class SignalChartGenerator:
     
     def add_technical_indicators(self, fig, data):
         """Add technical indicators to the chart"""
+        # Check if this figure has subplots
+        has_subplots = hasattr(fig, '_grid_ref') and fig._grid_ref is not None
+        
         # Moving averages
         if 'MA_20' in data.columns and 'MA_50' in data.columns:
+            trace_kwargs = {}
+            if has_subplots:
+                trace_kwargs = {'row': 1, 'col': 1}
+            
             fig.add_trace(
                 go.Scatter(
                     x=data.index,
@@ -109,7 +116,7 @@ class SignalChartGenerator:
                     line=dict(color='orange', width=1),
                     opacity=0.7
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
             
             fig.add_trace(
@@ -120,7 +127,7 @@ class SignalChartGenerator:
                     line=dict(color='purple', width=1),
                     opacity=0.7
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
         
         # VWAP if available
@@ -133,7 +140,7 @@ class SignalChartGenerator:
                     line=dict(color='yellow', width=2, dash='dash'),
                     opacity=0.8
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
         
         # Bollinger Bands if available
@@ -147,7 +154,7 @@ class SignalChartGenerator:
                     line=dict(color='gray', width=1),
                     opacity=0.5
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
             
             # Lower band
@@ -161,7 +168,7 @@ class SignalChartGenerator:
                     fillcolor='rgba(128,128,128,0.1)',
                     opacity=0.5
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
     
     def add_signal_markers(self, fig, data, signal):
@@ -203,6 +210,10 @@ class SignalChartGenerator:
             marker_color = self.colors['BUY'] if signal['action'] == 'BUY' else self.colors['SELL']
             marker_symbol = 'triangle-up' if signal['action'] == 'BUY' else 'triangle-down'
             
+            # Check if figure has subplots
+            has_subplots = hasattr(fig, '_grid_ref') and fig._grid_ref is not None
+            trace_kwargs = {'row': 1, 'col': 1} if has_subplots else {}
+            
             fig.add_trace(
                 go.Scatter(
                     x=[entry_time],
@@ -220,7 +231,7 @@ class SignalChartGenerator:
                                 f"Strategy: {signal.get('strategy', 'N/A')}<br>" +
                                 f"Confidence: {signal.get('confidence', 0):.1%}<extra></extra>"
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
     
     def add_price_levels(self, fig, data, signal):
@@ -230,6 +241,10 @@ class SignalChartGenerator:
         target = signal.get('target')
         
         x_range = [data.index[0], data.index[-1]]
+        
+        # Check if figure has subplots
+        has_subplots = hasattr(fig, '_grid_ref') and fig._grid_ref is not None
+        trace_kwargs = {'row': 1, 'col': 1} if has_subplots else {}
         
         # Entry price line
         fig.add_trace(
@@ -241,7 +256,7 @@ class SignalChartGenerator:
                 line=dict(color=self.colors['entry'], width=2, dash='solid'),
                 hovertemplate=f"Entry Price: {entry_price:.2f}<extra></extra>"
             ),
-            row=1, col=1
+            **trace_kwargs
         )
         
         # Stop loss line
@@ -255,7 +270,7 @@ class SignalChartGenerator:
                     line=dict(color=self.colors['stop_loss'], width=2, dash='dash'),
                     hovertemplate=f"Stop Loss: {stop_loss:.2f}<extra></extra>"
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
         
         # Target line
@@ -269,11 +284,11 @@ class SignalChartGenerator:
                     line=dict(color=self.colors['target'], width=2, dash='dot'),
                     hovertemplate=f"Target: {target:.2f}<extra></extra>"
                 ),
-                row=1, col=1
+                **trace_kwargs
             )
         
-        # Add risk-reward zone shading
-        if stop_loss and target:
+        # Add risk-reward zone shading (only works with subplots)
+        if stop_loss and target and has_subplots:
             if signal['action'] == 'BUY':
                 # Profit zone (green)
                 fig.add_hrect(
