@@ -1523,20 +1523,16 @@ def main():
                 update_market_data()
             st.rerun()
     
-    # Initial data load - FORCE update for debugging
+    # DISABLED auto-refresh loop to prevent signal clearing
+    # This was causing signals to be lost in an infinite refresh cycle
     current_data = get_current_market_data()
-    
-    # Force update if no data OR no signals exist
     signals_key = 'crypto_signals' if st.session_state.market_type == 'crypto' else 'stock_signals'
     current_signals = st.session_state.get(signals_key, [])
     
-    if not current_data or len(current_signals) == 0:
-        print(f"🔧 DEBUG: Forcing data update - Data: {len(current_data) if current_data else 0}, Signals: {len(current_signals)}")
-        with st.spinner("Loading/refreshing market data..."):
-            update_market_data()
-        st.rerun()
-    else:
-        print(f"🔧 DEBUG: Current data exists: {len(current_data)} instruments, {len(current_signals)} signals")
+    print(f"🔧 DEBUG: Current status - Data: {len(current_data) if current_data else 0} instruments, {len(current_signals)} signals")
+    
+    # Only auto-refresh if user specifically requested it and enough time has passed
+    # No automatic signal clearing!
 
 if __name__ == "__main__":
     main()
