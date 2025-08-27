@@ -1111,7 +1111,7 @@ def display_advanced_signal_chart_inline():
     
     if st.button("❌ Close Chart", key="close_adv_chart"):
         st.session_state.selected_adv_signal = None
-        st.rerun()
+        # Chart will close on next refresh without redirect
 
 def create_advanced_signals_table(filtered_signals):
     """Create an interactive table for advanced trading signals"""
@@ -1123,7 +1123,8 @@ def create_advanced_signals_table(filtered_signals):
         with cols[0]:  # Chart button
             if st.button("📊", key=f"adv_chart_btn_{i}", help="View chart"):
                 st.session_state.selected_adv_signal = signal
-                st.rerun()
+                # Don't call st.rerun() to avoid tab reset - chart will show immediately
+                pass
         
         with cols[1]:  # Symbol
             symbol_display = signal['symbol'].replace('.NS', '').replace('-USD', '')
@@ -1862,10 +1863,16 @@ def main():
         data_interval_options = ['1m', '5m', '15m', '30m']
         default_data_interval = '5m'
     
+    # Force display of current interval and make sure 1m is visible
+    current_interval = st.session_state.get('data_interval', default_data_interval)
+    if current_interval not in data_interval_options:
+        current_interval = default_data_interval
+    
+    st.sidebar.write(f"**Available intervals:** {', '.join(data_interval_options)}")
     data_interval = st.sidebar.selectbox(
-        "Chart Interval",
+        "Chart Interval ⏱️",
         data_interval_options,
-        index=data_interval_options.index(default_data_interval) if default_data_interval in data_interval_options else 0,
+        index=data_interval_options.index(current_interval),
         help="Select the timeframe for price data and charts"
     )
     
