@@ -460,15 +460,23 @@ def display_trading_signals():
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
+        # Fix first-time tab switching by using session state
+        if 'confidence_filter_value' not in st.session_state:
+            st.session_state.confidence_filter_value = 0
+            
         confidence_filter = st.slider(
             "Minimum Confidence Level (%)",
             min_value=0,
             max_value=100,
-            value=0,
+            value=st.session_state.confidence_filter_value,
             step=5,
             help="Filter signals by minimum confidence level",
             key="trading_signals_confidence_filter"
         )
+        
+        # Update session state without causing rerun
+        if confidence_filter != st.session_state.confidence_filter_value:
+            st.session_state.confidence_filter_value = confidence_filter
     
     with col2:
         show_count = st.selectbox(
@@ -559,9 +567,28 @@ def display_trading_signals():
     # Display signals table
     st.info("💡 **Click the 📊 button next to any signal to view its chart in the area above**")
     
-    # Display table headers
-    header_cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
-    headers = ["Chart", "Symbol", "Action", "Price", "Strategy", "Conf.", "Stop Loss", "Target", "R:R", "Time"]
+    # Professional table styling
+    st.markdown("""
+    <style>
+    .signal-row {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin: 4px 0;
+        padding: 8px;
+        transition: all 0.2s ease;
+    }
+    .signal-row:hover {
+        background: #e2e8f0;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Display table headers  
+    header_cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
+    headers = ["Chart", "Symbol", "Action", "Price", "Strategies", "Conf.", "Stop Loss", "Target", "R:R", "Time"]
     
     for i, header in enumerate(headers):
         with header_cols[i]:
@@ -573,15 +600,42 @@ def display_trading_signals():
     create_signals_table(recent_signals)
 
 def create_signals_table(filtered_signals):
-    """Create an interactive table for trading signals"""
-    # Create table data
+    """Create an interactive table for trading signals with consolidated duplicate assets"""
+    # Consolidate signals by symbol to remove duplicates
+    consolidated_signals = {}
+    
+    for signal in filtered_signals:
+        symbol = signal['symbol']
+        if symbol not in consolidated_signals:
+            consolidated_signals[symbol] = {
+                'symbol': symbol,
+                'action': signal['action'],
+                'price': signal['price'],
+                'strategies': [signal['strategy']],
+                'confidence': signal['confidence'],
+                'stop_loss': signal.get('stop_loss'),
+                'target': signal.get('target'),
+                'risk_reward': signal.get('risk_reward'),
+                'timestamp': signal['timestamp'],
+                'original_signal': signal
+            }
+        else:
+            # Merge strategies and use highest confidence
+            existing = consolidated_signals[symbol]
+            if signal['strategy'] not in existing['strategies']:
+                existing['strategies'].append(signal['strategy'])
+            if signal['confidence'] > existing['confidence']:
+                existing['confidence'] = signal['confidence']
+                existing['original_signal'] = signal
+    
+    # Create table data from consolidated signals
     table_data = []
     current_time = datetime.now()
     
-    for i, signal in enumerate(filtered_signals):
+    for i, (symbol, consolidated) in enumerate(consolidated_signals.items()):
         # Format time
         try:
-            signal_timestamp = signal['timestamp']
+            signal_timestamp = consolidated['timestamp']
             if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
                 signal_timestamp = signal_timestamp.replace(tzinfo=None)
             
@@ -595,28 +649,35 @@ def create_signals_table(filtered_signals):
         
         # Format prices based on market type
         if st.session_state.market_type == 'crypto':
-            price_format = f"${signal['price']:.4f}"
-            stop_format = f"${signal.get('stop_loss', 0):.4f}" if signal.get('stop_loss') else "N/A"
-            target_format = f"${signal.get('target', 0):.4f}" if signal.get('target') else "N/A"
+            price_format = f"${consolidated['price']:.4f}"
+            stop_format = f"${consolidated.get('stop_loss', 0):.4f}" if consolidated.get('stop_loss') else "N/A"
+            target_format = f"${consolidated.get('target', 0):.4f}" if consolidated.get('target') else "N/A"
         else:
-            price_format = f"₹{signal['price']:.2f}"
-            stop_format = f"₹{signal.get('stop_loss', 0):.2f}" if signal.get('stop_loss') else "N/A"
-            target_format = f"₹{signal.get('target', 0):.2f}" if signal.get('target') else "N/A"
+            price_format = f"₹{consolidated['price']:.2f}"
+            stop_format = f"₹{consolidated.get('stop_loss', 0):.2f}" if consolidated.get('stop_loss') else "N/A"
+            target_format = f"₹{consolidated.get('target', 0):.2f}" if consolidated.get('target') else "N/A"
         
-        # Create action column with color
-        action_display = f"🟢 {signal['action']}" if signal['action'] == 'BUY' else f"🔴 {signal['action']}"
+        # Create action column with better styling
+        if consolidated['action'] == 'BUY':
+            action_display = "📈 BUY"
+        else:
+            action_display = "📉 SELL"
+        
+        # Format strategies as comma-separated list
+        strategies_text = ", ".join(consolidated['strategies'])
         
         table_data.append({
-            'Symbol': signal['symbol'].replace('.NS', '').replace('-USD', ''),
+            'Symbol': consolidated['symbol'].replace('.NS', '').replace('-USD', ''),
             'Action': action_display,
             'Price': price_format,
-            'Strategy': signal['strategy'],
-            'Confidence': f"{signal['confidence']:.0%}",
+            'Strategies': strategies_text,
+            'Confidence': f"{consolidated['confidence']:.0%}",
             'Stop Loss': stop_format,
             'Target': target_format,
-            'R:R': f"1:{signal.get('risk_reward', 0):.1f}" if signal.get('risk_reward') else "N/A",
+            'R:R': f"1:{consolidated.get('risk_reward', 0):.1f}" if consolidated.get('risk_reward') else "N/A",
             'Time': time_str,
-            'Index': i  # Store index for selection
+            'Index': i,
+            'original_signal': consolidated['original_signal']
         })
     
     # Display table with clickable rows
@@ -627,15 +688,17 @@ def create_signals_table(filtered_signals):
         # Create columns for compact display
         col1, col2, col3 = st.columns([1, 2, 1])
         
-        # Display signals in a more compact format with click buttons
+        # Display signals in professional format with merged strategies
         for i, row in enumerate(table_data):
             with st.container():
-                cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
+                st.markdown('<div class="signal-row">', unsafe_allow_html=True)
+                cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
                 
                 with cols[0]:
-                    if st.button("📊", key=f"view_chart_{i}_{signal['symbol'].replace('.', '_').replace('-', '_')}_{int(signal['timestamp'].timestamp())}", help="View chart"):
-                        st.session_state.selected_signal = filtered_signals[i]
-                        # Don't rerun - just set the signal
+                    # Fix tab switching by using proper key and referencing correct signal
+                    chart_key = f"chart_btn_{i}_{row['Symbol']}_{hash(str(i))}"
+                    if st.button("📊", key=chart_key, help="View detailed chart"):
+                        st.session_state.selected_signal = row['original_signal']
                 
                 with cols[1]:
                     st.write(f"**{row['Symbol']}**")
@@ -647,7 +710,11 @@ def create_signals_table(filtered_signals):
                     st.write(row['Price'])
                 
                 with cols[4]:
-                    st.write(row['Strategy'][:10] + "..." if len(row['Strategy']) > 10 else row['Strategy'])
+                    # Display strategies as comma-separated, truncated if too long
+                    strategies = row['Strategies']
+                    if len(strategies) > 20:
+                        strategies = strategies[:17] + "..."
+                    st.markdown(f'<small style="color: #6b7280;">{strategies}</small>', unsafe_allow_html=True)
                 
                 with cols[5]:
                     st.write(row['Confidence'])
