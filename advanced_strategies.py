@@ -93,67 +93,83 @@ class AdvancedTradingStrategies:
     
     def detect_higher_highs(self, data, lookback=5):
         """Detect higher highs pattern"""
-        highs = data['High']
-        higher_highs = []
-        
-        for i in range(lookback, len(highs)):
-            current_high = highs.iloc[i]
-            prev_peak = highs.iloc[i-lookback:i].max()
+        try:
+            highs = data['High']
+            higher_highs = []
             
-            if current_high > prev_peak:
-                higher_highs.append(True)
-            else:
-                higher_highs.append(False)
-        
-        return [False] * lookback + higher_highs
+            for i in range(lookback, len(highs)):
+                current_high = highs.iloc[i]
+                prev_peak = highs.iloc[i-lookback:i].max()
+                
+                if current_high > prev_peak:
+                    higher_highs.append(True)
+                else:
+                    higher_highs.append(False)
+            
+            result = [False] * lookback + higher_highs
+            return pd.Series(result, index=data.index)
+        except Exception:
+            return pd.Series([False] * len(data), index=data.index)
     
     def detect_higher_lows(self, data, lookback=5):
         """Detect higher lows pattern"""
-        lows = data['Low']
-        higher_lows = []
-        
-        for i in range(lookback, len(lows)):
-            current_low = lows.iloc[i]
-            prev_trough = lows.iloc[i-lookback:i].min()
+        try:
+            lows = data['Low']
+            higher_lows = []
             
-            if current_low > prev_trough:
-                higher_lows.append(True)
-            else:
-                higher_lows.append(False)
-        
-        return [False] * lookback + higher_lows
+            for i in range(lookback, len(lows)):
+                current_low = lows.iloc[i]
+                prev_trough = lows.iloc[i-lookback:i].min()
+                
+                if current_low > prev_trough:
+                    higher_lows.append(True)
+                else:
+                    higher_lows.append(False)
+            
+            result = [False] * lookback + higher_lows
+            return pd.Series(result, index=data.index)
+        except Exception:
+            return pd.Series([False] * len(data), index=data.index)
     
     def detect_lower_highs(self, data, lookback=5):
         """Detect lower highs pattern"""
-        highs = data['High']
-        lower_highs = []
-        
-        for i in range(lookback, len(highs)):
-            current_high = highs.iloc[i]
-            prev_peak = highs.iloc[i-lookback:i].max()
+        try:
+            highs = data['High']
+            lower_highs = []
             
-            if current_high < prev_peak:
-                lower_highs.append(True)
-            else:
-                lower_highs.append(False)
-        
-        return [False] * lookback + lower_highs
+            for i in range(lookback, len(highs)):
+                current_high = highs.iloc[i]
+                prev_peak = highs.iloc[i-lookback:i].max()
+                
+                if current_high < prev_peak:
+                    lower_highs.append(True)
+                else:
+                    lower_highs.append(False)
+            
+            result = [False] * lookback + lower_highs
+            return pd.Series(result, index=data.index)
+        except Exception:
+            return pd.Series([False] * len(data), index=data.index)
     
     def detect_lower_lows(self, data, lookback=5):
         """Detect lower lows pattern"""
-        lows = data['Low']
-        lower_lows = []
-        
-        for i in range(lookback, len(lows)):
-            current_low = lows.iloc[i]
-            prev_trough = lows.iloc[i-lookback:i].min()
+        try:
+            lows = data['Low']
+            lower_lows = []
             
-            if current_low < prev_trough:
-                lower_lows.append(True)
-            else:
-                lower_lows.append(False)
-        
-        return [False] * lookback + lower_lows
+            for i in range(lookback, len(lows)):
+                current_low = lows.iloc[i]
+                prev_trough = lows.iloc[i-lookback:i].min()
+                
+                if current_low < prev_trough:
+                    lower_lows.append(True)
+                else:
+                    lower_lows.append(False)
+            
+            result = [False] * lookback + lower_lows
+            return pd.Series(result, index=data.index)
+        except Exception:
+            return pd.Series([False] * len(data), index=data.index)
     
     def detect_hammer(self, data):
         """Detect hammer candlestick pattern"""
