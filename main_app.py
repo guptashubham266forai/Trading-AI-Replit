@@ -1484,13 +1484,19 @@ def main():
                     signal['trading_style'] = 'intraday'
                     st.session_state.crypto_signals.append(signal)
                 
-                st.sidebar.success(f"✅ Generated {len(all_signals)} signals!")
+                st.sidebar.success(f"✅ Generated {len(all_signals)} signals for {test_symbol}!")
+                print(f"🔧 DEBUG: Force generated {len(all_signals)} signals")
                 st.rerun()
+                
             else:
-                st.sidebar.error("Could not get data for signal generation")
+                st.sidebar.error(f"No data for {test_symbol} or insufficient data points")
+                print(f"🔧 DEBUG: Could not get sufficient data for {test_symbol}")
                 
         except Exception as e:
-            st.sidebar.error(f"Error: {str(e)}")
+            st.sidebar.error(f"Force generation failed: {str(e)}")
+            print(f"🔧 ERROR in force generation: {str(e)}")
+            import traceback
+            print(f"🔧 TRACEBACK: {traceback.format_exc()}")
     
     # Auto-refresh logic
     if auto_refresh:
