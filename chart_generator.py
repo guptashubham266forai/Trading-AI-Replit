@@ -173,16 +173,28 @@ class SignalChartGenerator:
         closest_time_idx = None
         min_diff = float('inf')
         
+        # Convert signal_time to naive datetime once
+        if hasattr(signal_time, 'to_pydatetime'):
+            signal_time = signal_time.to_pydatetime()
+        if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+            signal_time = signal_time.replace(tzinfo=None)
+        
         for i, timestamp in enumerate(data.index):
+            # Convert timestamp to naive datetime
             if hasattr(timestamp, 'to_pydatetime'):
                 timestamp = timestamp.to_pydatetime()
-            if hasattr(signal_time, 'to_pydatetime'):
-                signal_time = signal_time.to_pydatetime()
+            if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
+                timestamp = timestamp.replace(tzinfo=None)
             
-            diff = abs((timestamp - signal_time).total_seconds())
-            if diff < min_diff:
-                min_diff = diff
-                closest_time_idx = i
+            try:
+                diff = abs((timestamp - signal_time).total_seconds())
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_time_idx = i
+            except Exception:
+                # If comparison fails, use the last index
+                closest_time_idx = len(data) - 1
+                break
         
         if closest_time_idx is not None:
             entry_time = data.index[closest_time_idx]

@@ -534,7 +534,14 @@ def display_trading_signals():
     if sort_option == "Confidence":
         filtered_signals.sort(key=lambda x: x.get('confidence', 0), reverse=True)
     elif sort_option == "Time":
-        filtered_signals.sort(key=lambda x: x.get('timestamp', datetime.now()), reverse=True)
+        # Fix timezone comparison issue
+        def get_timestamp_for_sorting(signal):
+            ts = signal.get('timestamp', datetime.now())
+            # Convert to naive datetime if it's timezone-aware
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+            return ts
+        filtered_signals.sort(key=get_timestamp_for_sorting, reverse=True)
     elif sort_option == "Risk:Reward":
         filtered_signals.sort(key=lambda x: x.get('risk_reward', 0), reverse=True)
     
@@ -581,12 +588,19 @@ def display_trading_signals():
             if signal.get('risk_reward'):
                 st.write(f"**Risk:Reward:** 1:{signal['risk_reward']:.1f}")
             
-            # Time format
-            time_ago = current_time - signal['timestamp'].replace(tzinfo=None)
-            if time_ago.total_seconds() < 3600:
-                time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
-            else:
-                time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+            # Time format - Fix timezone comparison
+            try:
+                signal_timestamp = signal['timestamp']
+                if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
+                    signal_timestamp = signal_timestamp.replace(tzinfo=None)
+                
+                time_ago = current_time - signal_timestamp
+                if time_ago.total_seconds() < 3600:
+                    time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
+                else:
+                    time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+            except Exception:
+                time_str = "Recently"
             
             st.write(f"**Time:** {time_str}")
             
@@ -1039,11 +1053,19 @@ def main():
                     
                     with col2:
                         st.metric("Action", signal['action'])
-                        time_ago = datetime.now() - signal['timestamp'].replace(tzinfo=None)
-                        if time_ago.total_seconds() < 3600:
-                            time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
-                        else:
-                            time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+                        # Fix timezone comparison for advanced signals
+                        try:
+                            signal_timestamp = signal['timestamp']
+                            if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
+                                signal_timestamp = signal_timestamp.replace(tzinfo=None)
+                            
+                            time_ago = datetime.now() - signal_timestamp
+                            if time_ago.total_seconds() < 3600:
+                                time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
+                            else:
+                                time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+                        except Exception:
+                            time_str = "Recently"
                         st.write(f"**Time:** {time_str}")
                     
                     with col3:
