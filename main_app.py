@@ -911,6 +911,287 @@ def display_chart_area():
         
         st.write("---")
 
+def display_advanced_signals():
+    """Display advanced trading signals with same filtering and display as trading signals"""
+    signals = get_current_signals()
+    trading_style = st.session_state.trading_style.title()
+    market_type = st.session_state.market_type.title()
+    
+    st.header(f"🚀 Advanced {trading_style} {market_type} Signals")
+    st.info("🏆 Professional strategies with 3:1 risk-reward ratios and 85%+ confidence")
+    
+    # Filter to only advanced signals
+    if signals:
+        advanced_signals = [s for s in signals if s.get('strategy', '').startswith(('Smart Money', 'Volume Price', 'Momentum Divergence'))]
+    else:
+        advanced_signals = []
+    
+    # Add confidence filter controls (same as trading signals)
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        if 'adv_confidence_filter_value' not in st.session_state:
+            st.session_state.adv_confidence_filter_value = 85  # Higher default for advanced
+            
+        confidence_filter = st.slider(
+            "Minimum Confidence Level (%)",
+            min_value=0,
+            max_value=100,
+            value=st.session_state.adv_confidence_filter_value,
+            step=5,
+            help="Filter advanced signals by minimum confidence level",
+            key="advanced_signals_confidence_filter"
+        )
+        
+        if confidence_filter != st.session_state.adv_confidence_filter_value:
+            st.session_state.adv_confidence_filter_value = confidence_filter
+    
+    with col2:
+        show_count = st.selectbox(
+            "Show Count",
+            options=[6, 9, 12, 15],
+            index=1,
+            help="Number of advanced signals to display",
+            key="advanced_signals_show_count"
+        )
+    
+    with col3:
+        sort_option = st.selectbox(
+            "Sort By",
+            options=["Confidence", "Time", "Risk:Reward"],
+            index=0,
+            help="Sort advanced signals by selected criteria",
+            key="advanced_signals_sort_option"
+        )
+    
+    if not advanced_signals:
+        st.info("No advanced signals at the moment. Advanced strategies require high-probability setups.")
+        
+        # Show what advanced strategies look for
+        st.subheader("🎯 Advanced Strategy Overview")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.write("**🧠 Smart Money Concepts**")
+            st.write("• Market structure breaks")
+            st.write("• High volume confirmation")
+            st.write("• Institutional order flow")
+            st.write("• 85%+ win rate target")
+            
+        with col2:
+            st.write("**📊 Volume Price Analysis**")
+            st.write("• VWAP breakouts/breakdowns")
+            st.write("• Volume spike detection")
+            st.write("• Smart money accumulation")
+            st.write("• 2.5:1 minimum R:R")
+            
+        with col3:
+            st.write("**⚡ Momentum Divergence**")
+            st.write("• RSI-price divergences")
+            st.write("• Hidden divergence patterns")
+            st.write("• Trend reversal signals")
+            st.write("• 3:1 risk-reward ratio")
+        return
+    
+    # Filter signals by time and confidence (same logic as trading signals)
+    current_time = datetime.now()
+    time_filter = 14400 if st.session_state.trading_style == 'swing' else 7200  # 4 hours for swing, 2 hours for intraday
+    confidence_threshold = confidence_filter / 100.0
+    
+    filtered_signals = []
+    for signal in advanced_signals:
+        try:
+            # Time filter
+            signal_time = signal['timestamp']
+            if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                signal_time = signal_time.replace(tzinfo=None)
+            
+            time_diff = (current_time - signal_time).total_seconds()
+            time_valid = time_diff < time_filter
+            
+            # Confidence filter
+            confidence_valid = signal.get('confidence', 0) >= confidence_threshold
+            
+            if time_valid and confidence_valid:
+                filtered_signals.append(signal)
+        except Exception:
+            if signal.get('confidence', 0) >= confidence_threshold:
+                filtered_signals.append(signal)
+    
+    # Sort signals based on selected criteria
+    if sort_option == "Confidence":
+        filtered_signals.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+    elif sort_option == "Time":
+        def get_timestamp_for_sorting(signal):
+            ts = signal.get('timestamp', datetime.now())
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+            return ts
+        filtered_signals.sort(key=get_timestamp_for_sorting, reverse=True)
+    elif sort_option == "Risk:Reward":
+        filtered_signals.sort(key=lambda x: x.get('risk_reward', 0), reverse=True)
+    
+    if not filtered_signals:
+        st.info(f"No recent advanced signals found with minimum {confidence_filter}% confidence.")
+        return
+    
+    # Show signal statistics
+    st.info(f"📊 Showing {len(filtered_signals)} advanced signals with ≥{confidence_filter}% confidence | Average confidence: {sum(s.get('confidence', 0) for s in filtered_signals) / len(filtered_signals):.1%}")
+    
+    # Limit to show_count
+    recent_signals = filtered_signals[:show_count]
+    
+    # Chart display area for selected signal
+    if 'selected_adv_signal' in st.session_state and st.session_state.selected_adv_signal:
+        display_advanced_signal_chart_inline()
+        st.write("---")
+    
+    # Display signals table
+    st.info("💡 **Click the 📊 button next to any signal to view its chart in the area above**")
+    
+    # Display table headers  
+    header_cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
+    headers = ["Chart", "Symbol", "Action", "Price", "Strategy", "Conf.", "Stop Loss", "Target", "R:R", "Time"]
+    
+    for i, header in enumerate(headers):
+        with header_cols[i]:
+            st.write(f"**{header}**")
+    
+    st.divider()
+    
+    # Display advanced signals table  
+    create_advanced_signals_table(recent_signals)
+
+def display_advanced_signal_chart_inline():
+    """Display the chart for selected advanced signal inline"""
+    if 'selected_adv_signal' not in st.session_state or not st.session_state.selected_adv_signal:
+        return
+    
+    signal = st.session_state.selected_adv_signal
+    symbol = signal['symbol']
+    
+    st.subheader(f"📊 Advanced Signal Chart: {symbol.replace('.NS', '').replace('-USD', '')}")
+    
+    current_data = get_current_market_data()
+    if current_data and symbol in current_data:
+        chart_data = current_data[symbol]
+        chart_fig = st.session_state.chart_generator.create_signal_chart(
+            chart_data, signal, symbol
+        )
+        
+        if chart_fig:
+            st.plotly_chart(chart_fig, use_container_width=True)
+            
+            # Signal details
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.write(f"**Strategy:** {signal['strategy']}")
+                st.write(f"**Confidence:** {signal.get('confidence', 0):.1%}")
+            
+            with col2:
+                if st.session_state.market_type == 'crypto':
+                    st.write(f"**Entry:** ${signal['price']:.4f}")
+                    st.write(f"**Stop:** ${signal.get('stop_loss', 0):.4f}")
+                else:
+                    st.write(f"**Entry:** ₹{signal['price']:.2f}")
+                    st.write(f"**Stop:** ₹{signal.get('stop_loss', 0):.2f}")
+            
+            with col3:
+                if st.session_state.market_type == 'crypto':
+                    st.write(f"**Target:** ${signal.get('target', 0):.4f}")
+                else:
+                    st.write(f"**Target:** ₹{signal.get('target', 0):.2f}")
+                st.write(f"**R:R:** 1:{signal.get('risk_reward', 0):.1f}")
+        else:
+            st.error("Unable to generate chart for this signal")
+    else:
+        st.error(f"No data available for {symbol}")
+    
+    if st.button("❌ Close Chart", key="close_adv_chart"):
+        st.session_state.selected_adv_signal = None
+        st.rerun()
+
+def create_advanced_signals_table(filtered_signals):
+    """Create an interactive table for advanced trading signals"""
+    current_time = datetime.now()
+    
+    for i, signal in enumerate(filtered_signals):
+        cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
+        
+        with cols[0]:  # Chart button
+            if st.button("📊", key=f"adv_chart_btn_{i}", help="View chart"):
+                st.session_state.selected_adv_signal = signal
+                st.rerun()
+        
+        with cols[1]:  # Symbol
+            symbol_display = signal['symbol'].replace('.NS', '').replace('-USD', '')
+            st.write(symbol_display)
+        
+        with cols[2]:  # Action
+            if signal['action'] == 'BUY':
+                st.success(signal['action'])
+            else:
+                st.error(signal['action'])
+        
+        with cols[3]:  # Price
+            if st.session_state.market_type == 'crypto':
+                st.write(f"${signal['price']:.4f}")
+            else:
+                st.write(f"₹{signal['price']:.2f}")
+        
+        with cols[4]:  # Strategy
+            strategy_short = signal['strategy'][:15] + "..." if len(signal['strategy']) > 15 else signal['strategy']
+            st.write(strategy_short)
+        
+        with cols[5]:  # Confidence
+            conf = signal.get('confidence', 0)
+            if conf >= 0.9:
+                st.success(f"{conf:.0%}")
+            elif conf >= 0.8:
+                st.warning(f"{conf:.0%}")
+            else:
+                st.info(f"{conf:.0%}")
+        
+        with cols[6]:  # Stop Loss
+            if st.session_state.market_type == 'crypto':
+                st.write(f"${signal.get('stop_loss', 0):.4f}")
+            else:
+                st.write(f"₹{signal.get('stop_loss', 0):.2f}")
+        
+        with cols[7]:  # Target
+            if st.session_state.market_type == 'crypto':
+                st.write(f"${signal.get('target', 0):.4f}")
+            else:
+                st.write(f"₹{signal.get('target', 0):.2f}")
+        
+        with cols[8]:  # Risk:Reward
+            rr = signal.get('risk_reward', 0)
+            if rr >= 3:
+                st.success(f"1:{rr:.1f}")
+            elif rr >= 2:
+                st.warning(f"1:{rr:.1f}")
+            else:
+                st.info(f"1:{rr:.1f}")
+        
+        with cols[9]:  # Time
+            try:
+                signal_timestamp = signal['timestamp']
+                if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
+                    signal_timestamp = signal_timestamp.replace(tzinfo=None)
+                
+                time_ago = current_time - signal_timestamp
+                if time_ago.total_seconds() < 3600:
+                    time_str = f"{int(time_ago.total_seconds() / 60)}m"
+                else:
+                    time_str = f"{int(time_ago.total_seconds() / 3600)}h"
+                st.write(time_str)
+            except Exception:
+                st.write("Now")
+        
+        st.divider()
+
 def display_signal_chart_inline():
     """Display chart for selected signal within the trading signals tab"""
     if 'selected_signal' not in st.session_state or not st.session_state.selected_signal:
@@ -1246,8 +1527,10 @@ def update_market_data():
             last_update_key = 'stock_last_update'
         
         # Update data for swing trading (longer timeframe)
-        period = '5d' if st.session_state.trading_style == 'swing' else '1d'
-        interval = '1h' if st.session_state.trading_style == 'swing' else '5m'
+        # Get data interval from session state (set by sidebar selector)
+        data_interval = st.session_state.get('data_interval', '5m')
+        period = '5d' if data_interval in ['1m', '5m'] else '1d'
+        interval = data_interval
         
         # Use fast batch fetching for crypto prices (much faster)
         if st.session_state.market_type == 'crypto':
@@ -1479,7 +1762,9 @@ def main():
                 
                 for symbol in symbols:
                     try:
-                        data = data_fetcher.get_intraday_data(symbol, period='1d', interval='5m')
+                        # Use selected interval for data fetching
+                        period = '5d' if data_interval in ['1m', '5m'] else '1d'
+                        data = data_fetcher.get_intraday_data(symbol, period=period, interval=data_interval)
                         if data is not None and len(data) > 0:
                             data_with_indicators = strategies.add_technical_indicators(data)
                             st.session_state[market_data_key][symbol] = data_with_indicators
@@ -1559,6 +1844,25 @@ def main():
         index=refresh_options.index(default_refresh) if default_refresh in refresh_options else 0
     )
     
+    # Data interval selection for granular control
+    st.sidebar.subheader("📊 Data Resolution")
+    if st.session_state.trading_style == 'swing':
+        data_interval_options = ['1h', '4h', '1d']
+        default_data_interval = '1h'
+    else:
+        data_interval_options = ['1m', '5m', '15m', '30m']
+        default_data_interval = '5m'
+    
+    data_interval = st.sidebar.selectbox(
+        "Chart Interval",
+        data_interval_options,
+        index=data_interval_options.index(default_data_interval) if default_data_interval in data_interval_options else 0,
+        help="Select the timeframe for price data and charts"
+    )
+    
+    # Store data interval in session state for use by update functions
+    st.session_state.data_interval = data_interval
+    
     # Strategy selection
     st.sidebar.header("📊 Active Strategies")
     
@@ -1616,107 +1920,7 @@ def main():
         display_trading_signals()
     
     with tab3:
-        # Advanced signals tab
-        st.header("🚀 Advanced Trading Signals")
-        st.info("Professional strategies with 3:1 risk-reward ratios and 85%+ confidence")
-        
-        current_signals = get_current_signals()
-        advanced_signals = [s for s in current_signals if s.get('strategy', '').startswith(('Smart Money', 'Volume Price', 'Momentum Divergence'))]
-        
-        if advanced_signals:
-            st.subheader("💎 Premium Strategy Signals")
-            
-            for i, signal in enumerate(advanced_signals[:8]):
-                with st.expander(f"{signal['symbol'].replace('.NS', '').replace('-USD', '')} - {signal['action']} - {signal['strategy']}", expanded=i<3):
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    
-                    with col1:
-                        confidence_color = "🟢" if signal.get('confidence', 0) > 0.9 else "🟡" if signal.get('confidence', 0) > 0.8 else "🟠"
-                        st.write(f"{confidence_color} **Confidence:** {signal.get('confidence', 0):.1%}")
-                        
-                        if st.session_state.market_type == 'crypto':
-                            price_format = f"${signal['price']:.4f}"
-                            stop_format = f"${signal.get('stop_loss', 0):.4f}"
-                            target_format = f"${signal.get('target', 0):.4f}"
-                        else:
-                            price_format = f"₹{signal['price']:.2f}"
-                            stop_format = f"₹{signal.get('stop_loss', 0):.2f}"
-                            target_format = f"₹{signal.get('target', 0):.2f}"
-                        
-                        st.write(f"**Entry Price:** {price_format}")
-                        st.write(f"**Stop Loss:** {stop_format}")
-                        st.write(f"**Target:** {target_format}")
-                        st.write(f"**Risk:Reward:** 1:{signal.get('risk_reward', 0):.1f}")
-                        
-                        if signal.get('notes'):
-                            st.write(f"**Analysis:** {signal['notes']}")
-                    
-                    with col2:
-                        st.metric("Action", signal['action'])
-                        # Fix timezone comparison for advanced signals
-                        try:
-                            signal_timestamp = signal['timestamp']
-                            if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
-                                signal_timestamp = signal_timestamp.replace(tzinfo=None)
-                            
-                            time_ago = datetime.now() - signal_timestamp
-                            if time_ago.total_seconds() < 3600:
-                                time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
-                            else:
-                                time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
-                        except Exception:
-                            time_str = "Recently"
-                        st.write(f"**Time:** {time_str}")
-                    
-                    with col3:
-                        if st.button(f"📊 Chart", key=f"adv_chart_{i}"):
-                            # Generate and display the signal chart
-                            symbol = signal['symbol']
-                            current_data = get_current_market_data()
-                            
-                            if current_data and symbol in current_data:
-                                chart_data = current_data[symbol]
-                                chart_fig = st.session_state.chart_generator.create_signal_chart(
-                                    chart_data, signal, symbol
-                                )
-                                
-                                if chart_fig:
-                                    st.plotly_chart(chart_fig, use_container_width=True)
-                                else:
-                                    st.error("Unable to generate chart")
-                        
-                        if signal.get('auto_executed'):
-                            st.success("🤖 Auto-executed")
-                        else:
-                            st.warning("⚠️ Manual trade")
-        else:
-            st.info("No advanced signals generated yet. Advanced strategies need more market data to identify high-probability setups.")
-            
-            # Show what advanced strategies look for
-            st.subheader("🎯 Advanced Strategy Overview")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.write("**🧠 Smart Money Concepts**")
-                st.write("• Market structure breaks")
-                st.write("• High volume confirmation")
-                st.write("• Institutional order flow")
-                st.write("• 85%+ win rate target")
-                
-            with col2:
-                st.write("**📊 Volume Price Analysis**")
-                st.write("• VWAP breakouts/breakdowns")
-                st.write("• Volume spike detection")
-                st.write("• Smart money accumulation")
-                st.write("• 2.5:1 minimum R:R")
-                
-            with col3:
-                st.write("**⚡ Momentum Divergence**")
-                st.write("• RSI-price divergences")
-                st.write("• Hidden divergence patterns")
-                st.write("• Trend reversal signals")
-                st.write("• 3:1 risk-reward ratio")
+        display_advanced_signals()
 
     with tab4:
         # Predictions tab with improved functionality
