@@ -578,6 +578,7 @@ def display_trading_signals():
 
 def update_market_data():
     """Update market data based on current selection"""
+    print("🔧 DEBUG: Starting update_market_data function")
     try:
         data_fetcher = get_current_data_fetcher()
         screener = get_current_screener()
@@ -620,6 +621,8 @@ def update_market_data():
         
         # Fetch detailed data for technical analysis (limit for performance)
         symbol_limit = 15 if st.session_state.market_type == 'crypto' else 20
+        print(f"🔧 DEBUG: Processing {len(symbols[:symbol_limit])} symbols for {st.session_state.market_type}")
+        
         for symbol in symbols[:symbol_limit]:
             try:
                 data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
@@ -629,7 +632,9 @@ def update_market_data():
                     st.session_state[market_data_key][symbol] = data_with_indicators
                     
                     # Generate basic signals
+                    print(f"🔧 DEBUG: About to generate basic signals for {symbol} with {len(data_with_indicators)} data points")
                     basic_signals = strategies.generate_signals(data_with_indicators, symbol)
+                    print(f"🔧 DEBUG: Generated {len(basic_signals)} basic signals for {symbol}")
                     
                     # Generate advanced signals
                     advanced_signals = st.session_state.advanced_strategies.generate_advanced_signals(data_with_indicators, symbol)
@@ -1362,6 +1367,7 @@ def main():
     
     # Manual refresh
     if st.sidebar.button("🔄 Refresh Now"):
+        print("🔧 DEBUG: Manual refresh button clicked")
         with st.spinner("Updating market data..."):
             update_market_data()
         st.rerun()
@@ -1386,9 +1392,12 @@ def main():
     # Initial data load
     current_data = get_current_market_data()
     if not current_data:
+        print("🔧 DEBUG: No current data found, loading initial data")
         with st.spinner("Loading initial market data..."):
             update_market_data()
         st.rerun()
+    else:
+        print(f"🔧 DEBUG: Current data exists: {len(current_data)} instruments")
 
 if __name__ == "__main__":
     main()
