@@ -12,8 +12,8 @@ class TradingStrategies:
         self.indicators = TechnicalIndicators()
         self.active_strategies = ["Moving Average Crossover", "RSI", "MACD"]
         self.max_risk_percent = 2.0
-        self.min_risk_reward = 2.0
-        self.confidence_threshold = 0.7
+        self.min_risk_reward = 1.0  # Lowered for more signals
+        self.confidence_threshold = 0.5  # Lowered for more signals
     
     def normalize_timestamp(self, timestamp):
         """Convert timestamp to timezone-naive datetime for consistency"""
@@ -39,7 +39,7 @@ class TradingStrategies:
     
     def add_technical_indicators(self, data):
         """Add all technical indicators to the data"""
-        if len(data) < 50:  # Need sufficient data for indicators
+        if len(data) < 20:  # Reduced data requirement for indicators
             return data
         
         # Add moving averages
@@ -147,7 +147,7 @@ class TradingStrategies:
         """RSI Oversold/Overbought Strategy"""
         signals = []
         
-        if len(data) < 20 or 'RSI' not in data.columns:
+        if len(data) < 10 or 'RSI' not in data.columns:  # Reduced data requirement
             return signals
         
         rsi = data['RSI']
@@ -161,8 +161,8 @@ class TradingStrategies:
             current_rsi = rsi.iloc[i]
             current_price = close_prices.iloc[i]
             
-            # RSI Oversold (Bullish Signal)
-            if current_rsi < 30 and (i == 0 or rsi.iloc[i-1] >= 30):
+            # RSI Oversold (Bullish Signal) - relaxed threshold
+            if current_rsi < 35 and (i == 0 or rsi.iloc[i-1] >= 35):
                 confidence = self.calculate_signal_confidence(data, i, 'BUY')
                 
                 if confidence >= self.confidence_threshold:
@@ -183,8 +183,8 @@ class TradingStrategies:
                             'timestamp': self.normalize_timestamp(data.index[i])
                         })
             
-            # RSI Overbought (Bearish Signal)
-            elif current_rsi > 70 and (i == 0 or rsi.iloc[i-1] <= 70):
+            # RSI Overbought (Bearish Signal) - relaxed threshold
+            elif current_rsi > 65 and (i == 0 or rsi.iloc[i-1] <= 65):
                 confidence = self.calculate_signal_confidence(data, i, 'SELL')
                 
                 if confidence >= self.confidence_threshold:
@@ -211,7 +211,7 @@ class TradingStrategies:
         """MACD Signal Line Crossover Strategy"""
         signals = []
         
-        if len(data) < 30 or 'MACD' not in data.columns or 'MACD_Signal' not in data.columns:
+        if len(data) < 15 or 'MACD' not in data.columns or 'MACD_Signal' not in data.columns:  # Reduced data requirement
             return signals
         
         macd = data['MACD']
@@ -391,8 +391,8 @@ class TradingStrategies:
                 elif action == 'SELL' and not pd.isna(resistance) and current_price >= resistance * 0.98:
                     confidence_factors.append(0.1)
             
-            # Base confidence
-            base_confidence = 0.5
+            # Base confidence (increased for more signals)
+            base_confidence = 0.6
             
             # Total confidence
             total_confidence = base_confidence + sum(confidence_factors)

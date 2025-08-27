@@ -637,8 +637,17 @@ def update_market_data():
                     # Combine signals
                     signals = basic_signals + advanced_signals
                     
-                    # Filter signals by confidence level (>70% for more opportunities)
-                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.7]
+                    # Debug: Print signal information
+                    if signals:
+                        print(f"Generated {len(signals)} signals for {symbol}:")
+                        for sig in signals:
+                            print(f"  - {sig['action']} {symbol} @ {sig['price']:.4f} (Confidence: {sig.get('confidence', 0):.1%})")
+                    
+                    # Filter signals by confidence level (allow lower confidence for debugging)
+                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.5]  # Lowered to 50%
+                    
+                    if high_confidence_signals:
+                        print(f"Filtered to {len(high_confidence_signals)} high confidence signals for {symbol}")
                     
                     # Separate very high confidence signals (>95%) for auto-execution
                     very_high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.95]
