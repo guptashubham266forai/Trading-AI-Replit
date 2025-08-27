@@ -35,7 +35,7 @@ st.set_page_config(
 def initialize_session_state():
     """Initialize all session state variables"""
     if 'market_type' not in st.session_state:
-        st.session_state.market_type = 'stocks'
+        st.session_state.market_type = 'crypto'
     if 'trading_style' not in st.session_state:
         st.session_state.trading_style = 'intraday'
     
@@ -723,11 +723,38 @@ def main():
     # Market and trading style selection
     display_market_selection()
     
-    # Initial data loading
+    # Initial data loading - Force load if empty
     current_data = get_current_market_data()
     if not current_data:
         with st.spinner(f"Loading {st.session_state.market_type} market data..."):
-            update_market_data()
+            try:
+                # Simplified data loading for initial startup
+                data_fetcher = get_current_data_fetcher()
+                screener = get_current_screener()
+                strategies = get_current_strategies()
+                
+                if st.session_state.market_type == 'crypto':
+                    symbols = ['BTC-USD', 'ETH-USD', 'BNB-USD']  # Load essential cryptos first
+                    market_data_key = 'crypto_market_data'
+                else:
+                    symbols = screener.get_liquid_stocks()[:5]  # Load fewer stocks initially
+                    market_data_key = 'stock_market_data'
+                
+                for symbol in symbols:
+                    try:
+                        data = data_fetcher.get_intraday_data(symbol, period='1d', interval='5m')
+                        if data is not None and len(data) > 0:
+                            data_with_indicators = strategies.add_technical_indicators(data)
+                            st.session_state[market_data_key][symbol] = data_with_indicators
+                    except Exception as e:
+                        st.error(f"Error loading {symbol}: {str(e)}")
+                        continue
+                
+                st.success(f"Loaded {len(st.session_state[market_data_key])} instruments")
+                
+            except Exception as e:
+                st.error(f"Data loading failed: {str(e)}")
+                # Continue with empty data
     
     # Configuration sidebar
     st.sidebar.header("⚙️ Strategy Configuration")
