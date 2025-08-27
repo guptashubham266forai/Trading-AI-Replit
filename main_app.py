@@ -688,21 +688,65 @@ def create_signals_table(filtered_signals):
         # Create columns for compact display
         col1, col2, col3 = st.columns([1, 2, 1])
         
-        # Display signals in professional format with clickable rows
+        # Display signals in professional table format with clickable chart buttons
         for i, row in enumerate(table_data):
-            # Make entire row clickable by using a button that spans the whole row
-            row_key = f"signal_row_{i}_{row['Symbol']}_{row['Index']}"
-            
-            # Use button to make entire row clickable
-            if st.button(
-                f"📊 {row['Symbol']} | {row['Action']} | {row['Price']} | {row['Strategies'][:25]}{'...' if len(row['Strategies']) > 25 else ''} | {row['Confidence']} | {row['R:R']} | {row['Time']}",
-                key=row_key,
-                help=f"Click to view {row['Symbol']} chart",
-                use_container_width=True
-            ):
-                st.session_state.selected_signal = row['original_signal']
-                # Force immediate update
-                st.rerun()
+            with st.container():
+                st.markdown('<div class="signal-row">', unsafe_allow_html=True)
+                cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
+                
+                with cols[0]:
+                    # Fix single-click issue with proper session state handling
+                    chart_key = f"chart_{row['Symbol']}_{i}"
+                    if st.button("📊", key=chart_key, help="View detailed chart"):
+                        # Set the signal without rerun to prevent double-click
+                        st.session_state.selected_signal = row['original_signal']
+
+                with cols[1]:
+                    st.markdown(f"**{row['Symbol']}**")
+                
+                with cols[2]:
+                    if row['Action'].startswith("📈"):
+                        st.markdown(f'<span style="color: #00C851; font-weight: 600;">{row["Action"]}</span>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<span style="color: #FF4444; font-weight: 600;">{row["Action"]}</span>', unsafe_allow_html=True)
+                
+                with cols[3]:
+                    st.markdown(f"**{row['Price']}**")
+                
+                with cols[4]:
+                    # Display strategies as comma-separated, truncated if too long
+                    strategies = row['Strategies']
+                    if len(strategies) > 20:
+                        strategies = strategies[:17] + "..."
+                    st.markdown(f'<small style="color: #6b7280;">{strategies}</small>', unsafe_allow_html=True)
+                
+                with cols[5]:
+                    confidence_val = int(row['Confidence'].replace('%', ''))
+                    if confidence_val >= 90:
+                        conf_color = "#00C851"
+                    elif confidence_val >= 75:
+                        conf_color = "#FF8800"
+                    else:
+                        conf_color = "#FF4444"
+                    st.markdown(f'<span style="color: {conf_color}; font-weight: 600;">{row["Confidence"]}</span>', unsafe_allow_html=True)
+                
+                with cols[6]:
+                    st.markdown(f'<span style="color: #dc2626;">{row["Stop Loss"]}</span>', unsafe_allow_html=True)
+                
+                with cols[7]:
+                    st.markdown(f'<span style="color: #059669;">{row["Target"]}</span>', unsafe_allow_html=True)
+                
+                with cols[8]:
+                    st.markdown(f"**{row['R:R']}**")
+                
+                with cols[9]:
+                    st.markdown(f'<small style="color: #6b7280;">{row["Time"]}</small>', unsafe_allow_html=True)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Add separator
+                if i < len(table_data) - 1:
+                    st.divider()
 
 def display_chart_area():
     """Display chart area at top of page for selected signal"""
