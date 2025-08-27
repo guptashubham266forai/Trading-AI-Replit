@@ -489,8 +489,10 @@ def display_trading_signals():
             help="Sort signals by selected criteria"
         )
     
+    print(f"🔧 DEBUG: Checking signals display. Raw signals count: {len(signals) if signals else 0}")
     if not signals:
         st.info(f"No active {trading_style.lower()} {market_type.lower()} signals at the moment. Signals will appear when favorable conditions are detected.")
+        st.write(f"**Debug Info:** Session state signals: {len(get_current_signals())}")
         return
     
     # Filter signals by time and confidence
@@ -661,10 +663,13 @@ def update_market_data():
                     print(f"🔧 DEBUG: Generated {len(basic_signals)} basic signals for {symbol}")
                     
                     # Generate advanced signals
+                    print(f"🔧 DEBUG: About to generate advanced signals for {symbol}")
                     advanced_signals = st.session_state.advanced_strategies.generate_advanced_signals(data_with_indicators, symbol)
+                    print(f"🔧 DEBUG: Generated {len(advanced_signals)} advanced signals for {symbol}")
                     
                     # Combine signals
                     signals = basic_signals + advanced_signals
+                    print(f"🔧 DEBUG: Total combined signals: {len(signals)} for {symbol}")
                     
                     # Debug: Print signal information
                     if signals:
@@ -672,8 +677,8 @@ def update_market_data():
                         for sig in signals:
                             print(f"  - {sig['action']} {symbol} @ {sig['price']:.4f} (Confidence: {sig.get('confidence', 0):.1%})")
                     
-                    # Filter signals by confidence level (allow lower confidence for debugging)
-                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.5]  # Lowered to 50%
+                    # Filter signals by confidence level (use minimal threshold for debugging)
+                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.01]  # Allow almost all signals
                     
                     if high_confidence_signals:
                         print(f"Filtered to {len(high_confidence_signals)} high confidence signals for {symbol}")
@@ -692,6 +697,7 @@ def update_market_data():
                             signal['trading_style'] = st.session_state.trading_style
                             
                             st.session_state[signals_key].append(signal)
+                            print(f"🔧 DEBUG: Added signal to session state. Total signals in {signals_key}: {len(st.session_state[signals_key])}")
                             
                             # Auto-execute high confidence signals
                             if st.session_state.auto_trader and st.session_state.db_manager:
