@@ -688,52 +688,21 @@ def create_signals_table(filtered_signals):
         # Create columns for compact display
         col1, col2, col3 = st.columns([1, 2, 1])
         
-        # Display signals in professional format with merged strategies
+        # Display signals in professional format with clickable rows
         for i, row in enumerate(table_data):
-            with st.container():
-                st.markdown('<div class="signal-row">', unsafe_allow_html=True)
-                cols = st.columns([1, 2, 1.5, 1.5, 2, 1, 1.5, 1.5, 1, 1])
-                
-                with cols[0]:
-                    # Fix tab switching by using proper key and referencing correct signal
-                    chart_key = f"chart_btn_{i}_{row['Symbol']}_{hash(str(i))}"
-                    if st.button("📊", key=chart_key, help="View detailed chart"):
-                        st.session_state.selected_signal = row['original_signal']
-                
-                with cols[1]:
-                    st.write(f"**{row['Symbol']}**")
-                
-                with cols[2]:
-                    st.write(row['Action'])
-                
-                with cols[3]:
-                    st.write(row['Price'])
-                
-                with cols[4]:
-                    # Display strategies as comma-separated, truncated if too long
-                    strategies = row['Strategies']
-                    if len(strategies) > 20:
-                        strategies = strategies[:17] + "..."
-                    st.markdown(f'<small style="color: #6b7280;">{strategies}</small>', unsafe_allow_html=True)
-                
-                with cols[5]:
-                    st.write(row['Confidence'])
-                
-                with cols[6]:
-                    st.write(row['Stop Loss'])
-                
-                with cols[7]:
-                    st.write(row['Target'])
-                
-                with cols[8]:
-                    st.write(row['R:R'])
-                
-                with cols[9]:
-                    st.write(row['Time'])
-                
-                # Add separator
-                if i < len(table_data) - 1:
-                    st.divider()
+            # Make entire row clickable by using a button that spans the whole row
+            row_key = f"signal_row_{i}_{row['Symbol']}_{row['Index']}"
+            
+            # Use button to make entire row clickable
+            if st.button(
+                f"📊 {row['Symbol']} | {row['Action']} | {row['Price']} | {row['Strategies'][:25]}{'...' if len(row['Strategies']) > 25 else ''} | {row['Confidence']} | {row['R:R']} | {row['Time']}",
+                key=row_key,
+                help=f"Click to view {row['Symbol']} chart",
+                use_container_width=True
+            ):
+                st.session_state.selected_signal = row['original_signal']
+                # Force immediate update
+                st.rerun()
 
 def display_chart_area():
     """Display chart area at top of page for selected signal"""
@@ -907,7 +876,7 @@ def display_signal_chart_inline():
     clean_symbol = symbol.replace('.NS', '').replace('-USD', '')
     
     # Chart controls
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     
     with col1:
         st.subheader(f"📊 {clean_symbol} - Signal Chart")
@@ -932,10 +901,6 @@ def display_signal_chart_inline():
         # Auto-refresh toggle
         auto_refresh = st.checkbox("🔄 Auto Refresh", value=True, key="auto_refresh_chart", help="Automatically refresh chart data")
     
-    with col5:
-        if st.button("❌ Close", key="close_signal_chart"):
-            st.session_state.selected_signal = None
-            st.rerun()
     
     # Load and display chart with smooth updates
     chart_data = load_chart_data(symbol, interval, time_range)
