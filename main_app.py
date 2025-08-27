@@ -500,24 +500,32 @@ def display_trading_signals():
     time_filter = 14400 if st.session_state.trading_style == 'swing' else 7200  # 4 hours for swing, 2 hours for intraday
     confidence_threshold = confidence_filter / 100.0  # Convert to decimal
     
+    print(f"🔧 DEBUG: Filtering {len(signals)} signals with confidence >= {confidence_threshold:.1%}")
+    
     filtered_signals = []
-    for signal in signals:
+    for i, signal in enumerate(signals):
         try:
             # Time filter
             signal_time = signal['timestamp']
             if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
                 signal_time = signal_time.replace(tzinfo=None)
             
-            time_valid = (current_time - signal_time).total_seconds() < time_filter
+            time_diff = (current_time - signal_time).total_seconds()
+            time_valid = time_diff < time_filter
             
             # Confidence filter
             confidence_valid = signal.get('confidence', 0) >= confidence_threshold
             
+            print(f"🔧 DEBUG: Signal {i+1}: {signal['symbol']} {signal['action']} - Confidence: {signal.get('confidence', 0):.1%}, Time diff: {time_diff:.0f}s, Time valid: {time_valid}, Confidence valid: {confidence_valid}")
+            
             if time_valid and confidence_valid:
                 filtered_signals.append(signal)
-        except:
+        except Exception as e:
+            print(f"🔧 DEBUG: Error processing signal {i+1}: {str(e)}")
             if signal.get('confidence', 0) >= confidence_threshold:
                 filtered_signals.append(signal)
+    
+    print(f"🔧 DEBUG: After filtering: {len(filtered_signals)} signals remain")
     
     # Sort signals based on selected criteria
     if sort_option == "Confidence":
