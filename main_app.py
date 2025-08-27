@@ -273,9 +273,17 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
             go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')),
             row=3, col=1
         )
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
-        fig.add_hline(y=50, line_dash="dot", line_color="gray", row=3, col=1)
+        # Add RSI reference lines
+        fig.update_layout(
+            shapes=[
+                dict(type="line", x0=0, x1=1, y0=70, y1=70,
+                     line=dict(color="red", dash="dash"), xref="paper", yref="y3"),
+                dict(type="line", x0=0, x1=1, y0=30, y1=30,
+                     line=dict(color="green", dash="dash"), xref="paper", yref="y3"),
+                dict(type="line", x0=0, x1=1, y0=50, y1=50,
+                     line=dict(color="gray", dash="dot"), xref="paper", yref="y3")
+            ]
+        )
     
     # MACD
     if all(col in data.columns for col in ['MACD', 'MACD_Signal', 'MACD_Histogram']):
@@ -300,8 +308,16 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 go.Scatter(x=data.index, y=data['Stoch_D'], name='Stoch %D', line=dict(color='red')),
                 row=4, col=1
             )
-            fig.add_hline(y=80, line_dash="dash", line_color="red", row=4, col=1)
-            fig.add_hline(y=20, line_dash="dash", line_color="green", row=4, col=1)
+            # Add Stochastic reference lines
+            current_shapes = fig.layout.shapes or []
+            fig.update_layout(
+                shapes=current_shapes + [
+                    dict(type="line", x0=0, x1=1, y0=80, y1=80,
+                         line=dict(color="red", dash="dash"), xref="paper", yref="y4"),
+                    dict(type="line", x0=0, x1=1, y0=20, y1=20,
+                         line=dict(color="green", dash="dash"), xref="paper", yref="y4")
+                ]
+            )
         
         # Williams %R
         elif 'Williams_R' in data.columns:
@@ -309,8 +325,16 @@ def create_universal_candlestick_chart(data, symbol, signals=None):
                 go.Scatter(x=data.index, y=data['Williams_R'], name='Williams %R', line=dict(color='orange')),
                 row=4, col=1
             )
-            fig.add_hline(y=-20, line_dash="dash", line_color="red", row=4, col=1)
-            fig.add_hline(y=-80, line_dash="dash", line_color="green", row=4, col=1)
+            # Add Williams %R reference lines
+            current_shapes = fig.layout.shapes or []
+            fig.update_layout(
+                shapes=current_shapes + [
+                    dict(type="line", x0=0, x1=1, y0=-20, y1=-20,
+                         line=dict(color="red", dash="dash"), xref="paper", yref="y4"),
+                    dict(type="line", x0=0, x1=1, y0=-80, y1=-80,
+                         line=dict(color="green", dash="dash"), xref="paper", yref="y4")
+                ]
+            )
     
     fig.update_layout(
         title=f"{symbol} - {st.session_state.market_type.title()} {st.session_state.trading_style.title()} Analysis",

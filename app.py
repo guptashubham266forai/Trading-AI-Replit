@@ -114,8 +114,15 @@ def create_candlestick_chart(data, symbol, signals=None):
             row=3, col=1
         )
         # Add RSI overbought/oversold lines
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+        # Add RSI reference lines
+        fig.update_layout(
+            shapes=[
+                dict(type="line", x0=0, x1=1, y0=70, y1=70,
+                     line=dict(color="red", dash="dash"), xref="paper", yref="y3"),
+                dict(type="line", x0=0, x1=1, y0=30, y1=30,
+                     line=dict(color="green", dash="dash"), xref="paper", yref="y3")
+            ]
+        )
     
     fig.update_layout(
         title=f"{symbol} - Real-time Analysis",
