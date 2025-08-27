@@ -13,7 +13,7 @@ class TradingStrategies:
         self.active_strategies = ["Moving Average Crossover", "RSI", "MACD"]
         self.max_risk_percent = 2.0
         self.min_risk_reward = 2.0
-        self.confidence_threshold = 0.6
+        self.confidence_threshold = 0.7
     
     def normalize_timestamp(self, timestamp):
         """Convert timestamp to timezone-naive datetime for consistency"""

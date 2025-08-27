@@ -444,7 +444,7 @@ def display_trading_signals():
             "Minimum Confidence Level (%)",
             min_value=50,
             max_value=100,
-            value=90,
+            value=70,
             step=5,
             help="Filter signals by minimum confidence level"
         )
@@ -585,12 +585,12 @@ def update_market_data():
         
         # Get appropriate symbols
         if st.session_state.market_type == 'crypto':
-            symbols = screener.get_liquid_cryptos()[:15]
+            symbols = screener.get_liquid_cryptos()[:50]  # Load all 50 cryptos
             market_data_key = 'crypto_market_data'
             signals_key = 'crypto_signals'
             last_update_key = 'crypto_last_update'
         else:
-            symbols = screener.get_liquid_stocks()[:20]
+            symbols = screener.get_liquid_stocks()[:30]
             market_data_key = 'stock_market_data'
             signals_key = 'stock_signals'
             last_update_key = 'stock_last_update'
@@ -616,8 +616,8 @@ def update_market_data():
                     # Combine signals
                     signals = basic_signals + advanced_signals
                     
-                    # Filter signals by confidence level (>90%)
-                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.9]
+                    # Filter signals by confidence level (>70% for more opportunities)
+                    high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.7]
                     
                     # Separate very high confidence signals (>95%) for auto-execution
                     very_high_confidence_signals = [s for s in signals if s.get('confidence', 0) >= 0.95]
@@ -734,10 +734,10 @@ def main():
                 strategies = get_current_strategies()
                 
                 if st.session_state.market_type == 'crypto':
-                    symbols = ['BTC-USD', 'ETH-USD', 'BNB-USD']  # Load essential cryptos first
+                    symbols = screener.get_liquid_cryptos()[:25]  # Load top 25 cryptos initially
                     market_data_key = 'crypto_market_data'
                 else:
-                    symbols = screener.get_liquid_stocks()[:5]  # Load fewer stocks initially
+                    symbols = screener.get_liquid_stocks()[:10]  # Load more stocks
                     market_data_key = 'stock_market_data'
                 
                 for symbol in symbols:

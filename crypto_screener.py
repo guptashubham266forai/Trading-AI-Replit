@@ -7,11 +7,18 @@ class CryptoScreener:
     """Screen cryptocurrencies based on various criteria for trading"""
     
     def __init__(self):
-        # Top liquid cryptocurrencies for trading (optimized list)
+        # Top 50 liquid cryptocurrencies for trading
         self.liquid_cryptos = [
             'BTC-USD', 'ETH-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD',
             'SOL-USD', 'DOGE-USD', 'DOT-USD', 'AVAX-USD', 'LTC-USD',
-            'LINK-USD', 'BCH-USD', 'ALGO-USD', 'ATOM-USD', 'NEAR-USD'
+            'LINK-USD', 'BCH-USD', 'ALGO-USD', 'ATOM-USD', 'NEAR-USD',
+            'SHIB-USD', 'MATIC-USD', 'UNI-USD', 'AAVE-USD', 'CRV-USD',
+            'SUSHI-USD', 'COMP-USD', 'MKR-USD', 'YFI-USD', 'SNX-USD',
+            'ZRX-USD', 'BAT-USD', 'ENJ-USD', 'MANA-USD', 'SAND-USD',
+            'GRT-USD', 'FIL-USD', 'LRC-USD', 'CVC-USD', 'NMR-USD',
+            'STORJ-USD', 'AXS-USD', 'CHZ-USD', 'HOT-USD', 'VET-USD',
+            'ZIL-USD', 'ICX-USD', 'OMG-USD', 'ZEN-USD', 'QTUM-USD',
+            'WAVES-USD', 'LSK-USD', 'STMX-USD', 'ANKR-USD', 'NKN-USD'
         ]
         
         # Screening criteria (crypto markets are more volatile)
@@ -22,8 +29,8 @@ class CryptoScreener:
         self.max_volatility = 0.50  # Maximum 50% daily volatility (crypto can be very volatile)
     
     def get_liquid_cryptos(self):
-        """Get list of liquid cryptocurrencies suitable for trading (fast loading)"""
-        return self.liquid_cryptos[:10]  # Limit to top 10 for faster loading
+        """Get list of liquid cryptocurrencies suitable for trading"""
+        return self.liquid_cryptos[:50]  # Return all 50 cryptos for maximum trading opportunities
     
     def filter_by_volume(self, crypto_data_dict, min_volume_ratio=1.2):
         """Filter cryptocurrencies by volume criteria"""
