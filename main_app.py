@@ -551,8 +551,13 @@ def display_trading_signals():
     # Limit to show_count
     recent_signals = filtered_signals[:show_count]
     
+    # Chart display area for selected signal (stays within this tab)
+    if 'selected_signal' in st.session_state and st.session_state.selected_signal:
+        display_signal_chart_inline()
+        st.write("---")
+    
     # Display signals table
-    st.info("💡 **Click the 📊 button next to any signal to view its chart above**")
+    st.info("💡 **Click the 📊 button next to any signal to view its chart in the area above**")
     
     # Display table headers
     header_cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
@@ -679,11 +684,18 @@ def display_chart_area():
                 data_fetcher = get_current_data_fetcher()
                 strategies = get_current_strategies()
                 
-                # Get fresh extended data for continuous view
-                period = '2d' if st.session_state.trading_style == 'intraday' else '7d' 
-                interval = '5m' if st.session_state.trading_style == 'intraday' else '1h'
+                # Get fresh extended data using selected interval
+                interval_val = st.session_state.get('chart_interval', '1h')
+                time_range_val = st.session_state.get('chart_time_range', '1d')
                 
-                fresh_data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
+                # Map time range to period for yfinance
+                period_map = {
+                    '4h': '1d', '12h': '2d', '1d': '5d', 
+                    '3d': '1mo', '1w': '3mo', '1m': '1y'
+                }
+                period = period_map.get(time_range_val, '1d')
+                
+                fresh_data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval_val)
                 if fresh_data is not None and len(fresh_data) > 0:
                     fresh_data_with_indicators = strategies.add_technical_indicators(fresh_data)
                     current_data = get_current_market_data()
@@ -701,9 +713,28 @@ def display_chart_area():
             )
             
         with col4:
-            if st.button("❌ Close", key="close_chart"):
-                st.session_state.selected_signal = None
-                st.rerun()
+            # Time interval selector
+            interval = st.selectbox(
+                "Interval", 
+                ["5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+                index=3,  # Default to 1h
+                key="chart_interval"
+            )
+            
+        with st.columns(1)[0]:
+            col_close, col_range = st.columns([1, 1])
+            with col_close:
+                if st.button("❌ Close", key="close_chart"):
+                    st.session_state.selected_signal = None
+                    st.rerun()
+            with col_range:
+                # Time range selector  
+                time_range = st.selectbox(
+                    "Range", 
+                    ["4h", "12h", "1d", "3d", "1w", "1m"],
+                    index=2,  # Default to 1d
+                    key="chart_time_range"
+                )
         
         # Chart explanation
         col1, col2, col3 = st.columns(3)
@@ -817,6 +848,240 @@ def display_chart_area():
                     st.error(f"Unable to load data for {clean_symbol}")
         
         st.write("---")
+
+def display_signal_chart_inline():
+    """Display chart for selected signal within the trading signals tab"""
+    if 'selected_signal' not in st.session_state or not st.session_state.selected_signal:
+        return
+        
+    signal = st.session_state.selected_signal
+    symbol = signal['symbol']
+    clean_symbol = symbol.replace('.NS', '').replace('-USD', '')
+    
+    # Chart controls
+    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
+    
+    with col1:
+        st.subheader(f"📊 {clean_symbol} - Signal Chart")
+    
+    with col2:
+        interval = st.selectbox(
+            "Interval", 
+            ["5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+            index=0,  # Default to 5m for detailed view
+            key="signal_chart_interval"
+        )
+    
+    with col3:
+        time_range = st.selectbox(
+            "Range", 
+            ["4h", "12h", "1d", "3d", "1w", "1m"],
+            index=1,  # Default to 12h
+            key="signal_chart_range"
+        )
+    
+    with col4:
+        if st.button("🔄 Update", key="update_signal_chart", help="Refresh chart data"):
+            load_chart_data(symbol, interval, time_range)
+            st.rerun()
+    
+    with col5:
+        if st.button("❌ Close", key="close_signal_chart"):
+            st.session_state.selected_signal = None
+            st.rerun()
+    
+    # Load and display chart
+    chart_data = load_chart_data(symbol, interval, time_range)
+    
+    if chart_data is not None and len(chart_data) > 0:
+        # Create enhanced chart with signal markers
+        chart = create_signal_chart_with_levels(chart_data, signal, clean_symbol, interval)
+        
+        if chart:
+            st.plotly_chart(chart, use_container_width=True)
+            
+            # Display real-time metrics
+            display_signal_metrics(chart_data, signal)
+        else:
+            st.error("Unable to create chart")
+    else:
+        st.warning(f"No data available for {clean_symbol}")
+
+def load_chart_data(symbol, interval, time_range):
+    """Load chart data with specified interval and range"""
+    try:
+        data_fetcher = get_current_data_fetcher()
+        strategies = get_current_strategies()
+        
+        # Convert time range to period for yfinance
+        period_map = {
+            "4h": "1d", "12h": "2d", "1d": "5d", 
+            "3d": "1mo", "1w": "3mo", "1m": "1y"
+        }
+        period = period_map.get(time_range, "1d")
+        
+        # Get fresh data
+        data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
+        
+        if data is not None and len(data) > 0:
+            # Add technical indicators
+            data_with_indicators = strategies.add_technical_indicators(data)
+            
+            # Update session state
+            current_data = get_current_market_data()
+            current_data[symbol] = data_with_indicators
+            
+            return data_with_indicators
+        
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+    
+    return None
+
+def create_signal_chart_with_levels(data, signal, symbol, interval):
+    """Create chart with entry, stop loss, and target levels marked"""
+    from plotly.subplots import make_subplots
+    import plotly.graph_objects as go
+    
+    fig = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+        subplot_titles=(f'{symbol} - {interval} Chart', 'Volume', 'RSI'),
+        row_heights=[0.7, 0.2, 0.1]
+    )
+    
+    # Candlestick chart
+    fig.add_trace(
+        go.Candlestick(
+            x=data.index,
+            open=data['Open'],
+            high=data['High'],
+            low=data['Low'],
+            close=data['Close'],
+            name='Price'
+        ),
+        row=1, col=1
+    )
+    
+    # Add signal levels with color coding
+    entry_price = signal.get('price', data['Close'].iloc[-1])
+    stop_loss = signal.get('stop_loss', entry_price * 0.98 if signal['action'] == 'BUY' else entry_price * 1.02)
+    target = signal.get('target', entry_price * 1.05 if signal['action'] == 'BUY' else entry_price * 0.95)
+    
+    # Entry line (white)
+    fig.add_hline(y=entry_price, line=dict(color="white", width=2, dash="solid"), 
+                  annotation_text=f"Entry: {entry_price:.4f}", row=1, col=1)
+    
+    # Stop loss line (red)
+    fig.add_hline(y=stop_loss, line=dict(color="red", width=2, dash="dash"), 
+                  annotation_text=f"Stop: {stop_loss:.4f}", row=1, col=1)
+    
+    # Target line (green)
+    fig.add_hline(y=target, line=dict(color="green", width=2, dash="dash"), 
+                  annotation_text=f"Target: {target:.4f}", row=1, col=1)
+    
+    # Add colored zones
+    if signal['action'] == 'BUY':
+        # Green zone (profit area above entry)
+        fig.add_hrect(y0=entry_price, y1=target, fillcolor="green", opacity=0.1, row=1, col=1)
+        # Red zone (loss area below entry)
+        fig.add_hrect(y0=stop_loss, y1=entry_price, fillcolor="red", opacity=0.1, row=1, col=1)
+    else:
+        # Green zone (profit area below entry)
+        fig.add_hrect(y0=target, y1=entry_price, fillcolor="green", opacity=0.1, row=1, col=1)
+        # Red zone (loss area above entry)
+        fig.add_hrect(y0=entry_price, y1=stop_loss, fillcolor="red", opacity=0.1, row=1, col=1)
+    
+    # Add signal marker
+    signal_time = signal.get('timestamp', data.index[-1])
+    marker_color = 'green' if signal['action'] == 'BUY' else 'red'
+    marker_symbol = 'triangle-up' if signal['action'] == 'BUY' else 'triangle-down'
+    
+    fig.add_trace(
+        go.Scatter(
+            x=[signal_time], y=[entry_price],
+            mode='markers',
+            marker=dict(symbol=marker_symbol, size=15, color=marker_color),
+            name=f"{signal['action']} Signal"
+        ),
+        row=1, col=1
+    )
+    
+    # Volume
+    colors = ['red' if close < open else 'green' for close, open in zip(data['Close'], data['Open'])]
+    fig.add_trace(
+        go.Bar(x=data.index, y=data['Volume'], name='Volume', marker_color=colors),
+        row=2, col=1
+    )
+    
+    # RSI
+    if 'RSI' in data.columns:
+        fig.add_trace(
+            go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')),
+            row=3, col=1
+        )
+        # RSI reference lines
+        fig.add_hline(y=70, line=dict(color="red", dash="dash"), row=3, col=1)
+        fig.add_hline(y=30, line=dict(color="green", dash="dash"), row=3, col=1)
+        fig.add_hline(y=50, line=dict(color="gray", dash="dot"), row=3, col=1)
+    
+    fig.update_layout(
+        title=f"{symbol} - {signal['action']} Signal at {entry_price:.4f}",
+        xaxis_rangeslider_visible=False,
+        height=600,
+        showlegend=True
+    )
+    
+    return fig
+
+def display_signal_metrics(data, signal):
+    """Display real-time metrics for the selected signal"""
+    current_price = data['Close'].iloc[-1]
+    entry_price = signal.get('price', current_price)
+    stop_loss = signal.get('stop_loss', entry_price * 0.98 if signal['action'] == 'BUY' else entry_price * 1.02)
+    target = signal.get('target', entry_price * 1.05 if signal['action'] == 'BUY' else entry_price * 0.95)
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        price_format = f"${current_price:.4f}" if st.session_state.market_type == 'crypto' else f"₹{current_price:.2f}"
+        st.metric("Current Price", price_format)
+    
+    with col2:
+        entry_format = f"${entry_price:.4f}" if st.session_state.market_type == 'crypto' else f"₹{entry_price:.2f}"
+        st.metric("Signal Entry", entry_format)
+    
+    with col3:
+        # Calculate P&L
+        if signal['action'] == 'BUY':
+            pnl_pct = ((current_price - entry_price) / entry_price) * 100
+        else:
+            pnl_pct = ((entry_price - current_price) / entry_price) * 100
+        
+        pnl_color = "normal"
+        if pnl_pct > 0:
+            pnl_color = "normal"
+        elif pnl_pct < 0:
+            pnl_color = "inverse"
+        
+        st.metric("Unrealized P&L", f"{pnl_pct:.2f}%", delta=f"{pnl_pct:.2f}%")
+    
+    with col4:
+        # Distance to target
+        if signal['action'] == 'BUY':
+            target_dist = ((target - current_price) / current_price) * 100
+        else:
+            target_dist = ((current_price - target) / current_price) * 100
+        st.metric("To Target", f"{abs(target_dist):.2f}%")
+    
+    with col5:
+        # Distance to stop loss
+        if signal['action'] == 'BUY':
+            stop_dist = ((current_price - stop_loss) / current_price) * 100
+        else:
+            stop_dist = ((stop_loss - current_price) / current_price) * 100
+        st.metric("To Stop", f"{abs(stop_dist):.2f}%")
 
 def update_market_data():
     """Update market data based on current selection"""
