@@ -555,81 +555,160 @@ def display_trading_signals():
     # Limit to show_count
     recent_signals = filtered_signals[:show_count]
     
-    # Display signals in cards
-    cols = st.columns(3)
+    # Display signals table
+    st.info("💡 **Click the 📊 button next to any signal to view its chart above**")
     
-    for i, signal in enumerate(recent_signals[:9]):
-        col_idx = i % 3
+    # Display table headers
+    header_cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
+    headers = ["Chart", "Symbol", "Action", "Price", "Strategy", "Conf.", "Stop Loss", "Target", "R:R", "Time"]
+    
+    for i, header in enumerate(headers):
+        with header_cols[i]:
+            st.write(f"**{header}**")
+    
+    st.divider()
+    
+    # Display signals table  
+    create_signals_table(recent_signals)
+
+def create_signals_table(filtered_signals):
+    """Create an interactive table for trading signals"""
+    # Create table data
+    table_data = []
+    current_time = datetime.now()
+    
+    for i, signal in enumerate(filtered_signals):
+        # Format time
+        try:
+            signal_timestamp = signal['timestamp']
+            if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
+                signal_timestamp = signal_timestamp.replace(tzinfo=None)
+            
+            time_ago = current_time - signal_timestamp
+            if time_ago.total_seconds() < 3600:
+                time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
+            else:
+                time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
+        except Exception:
+            time_str = "Recently"
         
-        with cols[col_idx]:
-            symbol_display = signal['symbol'].replace('.NS', '').replace('-USD', '')
-            
-            if signal['action'] == 'BUY':
-                st.success(f"**{symbol_display}** - {signal['action']}")
-            else:
-                st.error(f"**{symbol_display}** - {signal['action']}")
-            
-            # Price formatting based on market type
-            if st.session_state.market_type == 'crypto':
-                price_format = f"${signal['price']:.4f}"
-                stop_format = f"${signal.get('stop_loss', 0):.4f}"
-                target_format = f"${signal.get('target', 0):.4f}"
-            else:
-                price_format = f"₹{signal['price']:.2f}"
-                stop_format = f"₹{signal.get('stop_loss', 0):.2f}"
-                target_format = f"₹{signal.get('target', 0):.2f}"
-            
-            st.write(f"**Price:** {price_format}")
-            st.write(f"**Strategy:** {signal['strategy']}")
-            st.write(f"**Confidence:** {signal['confidence']:.1%}")
-            st.write(f"**Stop Loss:** {stop_format}")
-            st.write(f"**Target:** {target_format}")
-            
-            if signal.get('risk_reward'):
-                st.write(f"**Risk:Reward:** 1:{signal['risk_reward']:.1f}")
-            
-            # Time format - Fix timezone comparison
-            try:
-                signal_timestamp = signal['timestamp']
-                if hasattr(signal_timestamp, 'tzinfo') and signal_timestamp.tzinfo is not None:
-                    signal_timestamp = signal_timestamp.replace(tzinfo=None)
+        # Format prices based on market type
+        if st.session_state.market_type == 'crypto':
+            price_format = f"${signal['price']:.4f}"
+            stop_format = f"${signal.get('stop_loss', 0):.4f}" if signal.get('stop_loss') else "N/A"
+            target_format = f"${signal.get('target', 0):.4f}" if signal.get('target') else "N/A"
+        else:
+            price_format = f"₹{signal['price']:.2f}"
+            stop_format = f"₹{signal.get('stop_loss', 0):.2f}" if signal.get('stop_loss') else "N/A"
+            target_format = f"₹{signal.get('target', 0):.2f}" if signal.get('target') else "N/A"
+        
+        # Create action column with color
+        action_display = f"🟢 {signal['action']}" if signal['action'] == 'BUY' else f"🔴 {signal['action']}"
+        
+        table_data.append({
+            'Symbol': signal['symbol'].replace('.NS', '').replace('-USD', ''),
+            'Action': action_display,
+            'Price': price_format,
+            'Strategy': signal['strategy'],
+            'Confidence': f"{signal['confidence']:.0%}",
+            'Stop Loss': stop_format,
+            'Target': target_format,
+            'R:R': f"1:{signal.get('risk_reward', 0):.1f}" if signal.get('risk_reward') else "N/A",
+            'Time': time_str,
+            'Index': i  # Store index for selection
+        })
+    
+    # Display table with clickable rows
+    if table_data:
+        # Create a selection interface using radio buttons
+        st.write("**Select a signal to view its chart:**")
+        
+        # Create columns for compact display
+        col1, col2, col3 = st.columns([1, 2, 1])
+        
+        # Display signals in a more compact format with click buttons
+        for i, row in enumerate(table_data):
+            with st.container():
+                cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
                 
-                time_ago = current_time - signal_timestamp
-                if time_ago.total_seconds() < 3600:
-                    time_str = f"{int(time_ago.total_seconds() / 60)}m ago"
-                else:
-                    time_str = f"{int(time_ago.total_seconds() / 3600)}h ago"
-            except Exception:
-                time_str = "Recently"
-            
-            st.write(f"**Time:** {time_str}")
-            
-            # Add chart visualization button
-            if st.button(f"📊 View Signal Chart", key=f"chart_{i}"):
-                # Get current market data for this symbol
-                current_data = get_current_market_data()
-                symbol = signal['symbol']
+                with cols[0]:
+                    if st.button("📊", key=f"select_signal_{i}", help="View chart"):
+                        st.session_state.selected_signal = filtered_signals[i]
+                        st.rerun()
                 
-                if current_data and symbol in current_data:
-                    chart_data = current_data[symbol]
-                    
-                    # Generate enhanced mini chart for this signal
-                    mini_chart = st.session_state.chart_generator.create_mini_chart(
-                        chart_data, signal, symbol, height=500
-                    )
-                    
-                    if mini_chart:
-                        st.info(f"📊 **Signal Analysis for {symbol.replace('.NS', '').replace('-USD', '')}**")
-                        st.write("🟢 **Green Zone**: Target/Profit area")  
-                        st.write("🔴 **Red Zone**: Stop Loss/Risk area")
-                        st.write("📍 **White Line**: Entry point")
-                        st.plotly_chart(mini_chart, use_container_width=True)
-                    else:
-                        st.error("Unable to generate chart")
-                else:
-                    st.warning("Chart data not available")
+                with cols[1]:
+                    st.write(f"**{row['Symbol']}**")
+                
+                with cols[2]:
+                    st.write(row['Action'])
+                
+                with cols[3]:
+                    st.write(row['Price'])
+                
+                with cols[4]:
+                    st.write(row['Strategy'][:10] + "..." if len(row['Strategy']) > 10 else row['Strategy'])
+                
+                with cols[5]:
+                    st.write(row['Confidence'])
+                
+                with cols[6]:
+                    st.write(row['Stop Loss'])
+                
+                with cols[7]:
+                    st.write(row['Target'])
+                
+                with cols[8]:
+                    st.write(row['R:R'])
+                
+                with cols[9]:
+                    st.write(row['Time'])
+                
+                # Add separator
+                if i < len(table_data) - 1:
+                    st.divider()
+
+def display_chart_area():
+    """Display chart area at top of page for selected signal"""
+    if 'selected_signal' in st.session_state and st.session_state.selected_signal:
+        signal = st.session_state.selected_signal
+        symbol = signal['symbol']
+        
+        # Header with clear button
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.subheader(f"📊 Signal Analysis - {symbol.replace('.NS', '').replace('-USD', '')}")
+        with col2:
+            if st.button("❌ Clear Chart", key="clear_chart"):
+                st.session_state.selected_signal = None
+                st.rerun()
+        
+        # Chart explanation
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.write("🟢 **Green Zone**: Target/Profit area")
+        with col2:
+            st.write("🔴 **Red Zone**: Stop Loss/Risk area")
+        with col3:
+            st.write("📍 **White Line**: Entry point")
+        
+        # Get current market data and display chart
+        current_data = get_current_market_data()
+        
+        if current_data and symbol in current_data:
+            chart_data = current_data[symbol]
             
-            st.write("---")
+            mini_chart = st.session_state.chart_generator.create_mini_chart(
+                chart_data, signal, symbol, height=600
+            )
+            
+            if mini_chart:
+                st.plotly_chart(mini_chart, use_container_width=True)
+            else:
+                st.error("Unable to generate chart")
+        else:
+            st.warning("Chart data not available")
+        
+        st.write("---")
 
 def update_market_data():
     """Update market data based on current selection"""
@@ -810,6 +889,9 @@ def update_market_data():
 def main():
     """Main application function"""
     initialize_session_state()
+    
+    # Display chart area at top if signal is selected
+    display_chart_area()
     
     # EMERGENCY SIGNAL GENERATION BUTTON - TOP OF PAGE
     col1, col2, col3 = st.columns([1, 2, 1])
