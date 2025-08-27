@@ -635,7 +635,7 @@ def create_signals_table(filtered_signals):
                 with cols[0]:
                     if st.button("📊", key=f"view_chart_{i}_{signal['symbol'].replace('.', '_').replace('-', '_')}_{int(signal['timestamp'].timestamp())}", help="View chart"):
                         st.session_state.selected_signal = filtered_signals[i]
-                        st.rerun()
+                        # Don't rerun - just set the signal
                 
                 with cols[1]:
                     st.write(f"**{row['Symbol']}**")
@@ -713,28 +713,9 @@ def display_chart_area():
             )
             
         with col4:
-            # Time interval selector
-            interval = st.selectbox(
-                "Interval", 
-                ["5m", "15m", "30m", "1h", "4h", "1d", "1w"],
-                index=3,  # Default to 1h
-                key="chart_interval"
-            )
-            
-        with st.columns(1)[0]:
-            col_close, col_range = st.columns([1, 1])
-            with col_close:
-                if st.button("❌ Close", key="close_chart"):
-                    st.session_state.selected_signal = None
-                    st.rerun()
-            with col_range:
-                # Time range selector  
-                time_range = st.selectbox(
-                    "Range", 
-                    ["4h", "12h", "1d", "3d", "1w", "1m"],
-                    index=2,  # Default to 1d
-                    key="chart_time_range"
-                )
+            if st.button("❌ Close", key="close_chart"):
+                st.session_state.selected_signal = None
+                st.rerun()
         
         # Chart explanation
         col1, col2, col3 = st.columns(3)
@@ -869,7 +850,7 @@ def display_signal_chart_inline():
             "Interval", 
             ["5m", "15m", "30m", "1h", "4h", "1d", "1w"],
             index=0,  # Default to 5m for detailed view
-            key="signal_chart_interval"
+            key="inline_chart_interval"
         )
     
     with col3:
@@ -877,7 +858,7 @@ def display_signal_chart_inline():
             "Range", 
             ["4h", "12h", "1d", "3d", "1w", "1m"],
             index=1,  # Default to 12h
-            key="signal_chart_range"
+            key="inline_chart_range"
         )
     
     with col4:
@@ -1263,8 +1244,7 @@ def main():
     """Main application function"""
     initialize_session_state()
     
-    # Display chart area at top if signal is selected
-    display_chart_area()
+    # Remove chart area from top to prevent tab switching
     
     # EMERGENCY SIGNAL GENERATION BUTTON - TOP OF PAGE
     col1, col2, col3 = st.columns([1, 2, 1])
