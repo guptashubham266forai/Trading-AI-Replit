@@ -628,7 +628,7 @@ def create_signals_table(filtered_signals):
                 cols = st.columns([1, 2, 2, 1.5, 1, 1.5, 1.5, 1, 1, 1])
                 
                 with cols[0]:
-                    if st.button("📊", key=f"select_signal_{i}", help="View chart"):
+                    if st.button("📊", key=f"view_chart_{i}_{signal['symbol'].replace('.', '_').replace('-', '_')}_{int(signal['timestamp'].timestamp())}", help="View chart"):
                         st.session_state.selected_signal = filtered_signals[i]
                         st.rerun()
                 
@@ -668,13 +668,40 @@ def display_chart_area():
     if 'selected_signal' in st.session_state and st.session_state.selected_signal:
         signal = st.session_state.selected_signal
         symbol = signal['symbol']
+        clean_symbol = symbol.replace('.NS', '').replace('-USD', '')
         
-        # Header with clear button
-        col1, col2 = st.columns([3, 1])
+        # Header with controls
+        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
         with col1:
-            st.subheader(f"📊 Signal Analysis - {symbol.replace('.NS', '').replace('-USD', '')}")
+            st.subheader(f"📊 Live Chart - {clean_symbol}")
         with col2:
-            if st.button("❌ Clear Chart", key="clear_chart"):
+            if st.button("🔄 Refresh", key="refresh_live_chart", help="Update with latest data"):
+                data_fetcher = get_current_data_fetcher()
+                strategies = get_current_strategies()
+                
+                # Get fresh extended data for continuous view
+                period = '2d' if st.session_state.trading_style == 'intraday' else '7d' 
+                interval = '5m' if st.session_state.trading_style == 'intraday' else '1h'
+                
+                fresh_data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
+                if fresh_data is not None and len(fresh_data) > 0:
+                    fresh_data_with_indicators = strategies.add_technical_indicators(fresh_data)
+                    current_data = get_current_market_data()
+                    current_data[symbol] = fresh_data_with_indicators
+                    st.success(f"Updated {clean_symbol} with {len(fresh_data)} data points")
+                    st.rerun()
+                    
+        with col3:
+            # Time range selector for continuous view
+            time_range = st.selectbox(
+                "Time Range", 
+                ["2 hours", "4 hours", "1 day", "2 days", "1 week"],
+                index=2,
+                key="chart_time_range"
+            )
+            
+        with col4:
+            if st.button("❌ Close", key="close_chart"):
                 st.session_state.selected_signal = None
                 st.rerun()
         
@@ -687,22 +714,107 @@ def display_chart_area():
         with col3:
             st.write("📍 **White Line**: Entry point")
         
-        # Get current market data and display chart
+        # Get and display continuous chart
         current_data = get_current_market_data()
         
         if current_data and symbol in current_data:
             chart_data = current_data[symbol]
             
-            mini_chart = st.session_state.chart_generator.create_mini_chart(
-                chart_data, signal, symbol, height=600
+            # Filter data based on selected time range
+            time_ranges = {
+                "2 hours": 120,
+                "4 hours": 240, 
+                "1 day": 1440,
+                "2 days": 2880,
+                "1 week": 10080
+            }
+            
+            minutes_back = time_ranges.get(time_range, 1440)
+            if st.session_state.trading_style == 'intraday':
+                # For intraday, filter last N periods
+                filtered_data = chart_data.tail(minutes_back // 5) if len(chart_data) > 0 else chart_data
+            else:
+                # For swing trading, use more data
+                filtered_data = chart_data.tail(minutes_back // 60) if len(chart_data) > 0 else chart_data
+            
+            # Create enhanced continuous chart
+            enhanced_chart = create_universal_candlestick_chart(
+                filtered_data, 
+                clean_symbol,
+                [signal] if signal else None
             )
             
-            if mini_chart:
-                st.plotly_chart(mini_chart, use_container_width=True)
+            if enhanced_chart:
+                # Update chart title to show it's live
+                enhanced_chart.update_layout(
+                    title=f"{clean_symbol} - Live Trading Chart ({time_range})",
+                    height=700
+                )
+                st.plotly_chart(enhanced_chart, use_container_width=True)
+                
+                # Display real-time signal metrics
+                if len(filtered_data) > 0:
+                    current_price = filtered_data['Close'].iloc[-1]
+                    entry_price = signal.get('price', current_price)
+                    stop_loss = signal.get('stop_loss', entry_price * 0.95)
+                    target = signal.get('target', entry_price * 1.05)
+                    
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    
+                    with col1:
+                        price_format = f"${current_price:.4f}" if st.session_state.market_type == 'crypto' else f"₹{current_price:.2f}"
+                        st.metric("Current Price", price_format)
+                    
+                    with col2:
+                        entry_format = f"${entry_price:.4f}" if st.session_state.market_type == 'crypto' else f"₹{entry_price:.2f}"
+                        st.metric("Signal Entry", entry_format)
+                    
+                    with col3:
+                        pnl_pct = ((current_price - entry_price) / entry_price) * 100
+                        if signal['action'] == 'SELL':
+                            pnl_pct = -pnl_pct
+                        st.metric("Unrealized P&L", f"{pnl_pct:.2f}%", delta=f"{pnl_pct:.2f}%")
+                    
+                    with col4:
+                        distance_to_target = ((target - current_price) / current_price) * 100
+                        if signal['action'] == 'SELL':
+                            distance_to_target = -distance_to_target
+                        st.metric("To Target", f"{abs(distance_to_target):.2f}%")
+                    
+                    with col5:
+                        distance_to_stop = ((current_price - stop_loss) / current_price) * 100
+                        if signal['action'] == 'SELL':
+                            distance_to_stop = -distance_to_stop
+                        st.metric("To Stop Loss", f"{abs(distance_to_stop):.2f}%")
+                
             else:
                 st.error("Unable to generate chart")
         else:
-            st.warning("Chart data not available")
+            st.warning("Chart data not available - loading...")
+            
+            # Try to load extended data if not available
+            with st.spinner("Loading continuous chart data..."):
+                data_fetcher = get_current_data_fetcher()
+                strategies = get_current_strategies()
+                
+                # Get extended data based on time range selection
+                if time_range in ["2 hours", "4 hours"]:
+                    period, interval = '1d', '5m'
+                elif time_range == "1 day":
+                    period, interval = '2d', '5m'
+                elif time_range == "2 days":
+                    period, interval = '5d', '15m'
+                else:  # 1 week
+                    period, interval = '1mo', '1h'
+                
+                fresh_data = data_fetcher.get_intraday_data(symbol, period=period, interval=interval)
+                if fresh_data is not None and len(fresh_data) > 0:
+                    fresh_data_with_indicators = strategies.add_technical_indicators(fresh_data)
+                    current_data[symbol] = fresh_data_with_indicators
+                    st.success(f"Loaded {len(fresh_data)} data points for {clean_symbol}")
+                    st.rerun()
+                else:
+                    st.error(f"Unable to load data for {clean_symbol}")
         
         st.write("---")
 
