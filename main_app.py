@@ -11,6 +11,7 @@ from data_fetcher import DataFetcher
 from crypto_data_fetcher import CryptoDataFetcher
 from strategies import TradingStrategies
 from advanced_strategies import AdvancedTradingStrategies
+from smc_ict_strategies import SMCICTStrategies
 from chart_generator import SignalChartGenerator
 from audio_notifications import AudioNotifications
 from stock_screener import StockScreener
@@ -81,6 +82,10 @@ def initialize_session_state():
     # Advanced trading strategies
     if 'advanced_strategies' not in st.session_state:
         st.session_state.advanced_strategies = AdvancedTradingStrategies()
+    
+    # SMC/ICT trading strategies
+    if 'smc_ict_strategies' not in st.session_state:
+        st.session_state.smc_ict_strategies = SMCICTStrategies()
     
     # Chart generator
     if 'chart_generator' not in st.session_state:
@@ -1579,9 +1584,14 @@ def update_market_data():
                     advanced_signals = st.session_state.advanced_strategies.generate_advanced_signals(data_with_indicators, symbol)
                     print(f"🔧 DEBUG: Generated {len(advanced_signals)} advanced signals for {symbol}")
                     
-                    # Combine signals
-                    signals = basic_signals + advanced_signals
-                    print(f"🔧 DEBUG: Total combined signals: {len(signals)} for {symbol}")
+                    # Generate SMC/ICT signals (professional institutional strategies)
+                    print(f"🔧 DEBUG: About to generate SMC/ICT signals for {symbol}")
+                    smc_ict_signals = st.session_state.smc_ict_strategies.generate_smc_ict_signals(data_with_indicators, symbol)
+                    print(f"🔧 DEBUG: Generated {len(smc_ict_signals)} SMC/ICT signals for {symbol}")
+                    
+                    # Combine all signals
+                    signals = basic_signals + advanced_signals + smc_ict_signals
+                    print(f"🔧 DEBUG: Total combined signals: {len(signals)} for {symbol} (Basic: {len(basic_signals)}, Advanced: {len(advanced_signals)}, SMC/ICT: {len(smc_ict_signals)})")
                     
                     # Debug: Print signal information
                     if signals:
