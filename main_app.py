@@ -917,8 +917,9 @@ def display_chart_area():
         st.write("---")
 
 def display_unified_trading_dashboard():
-    """Professional unified trading signals dashboard with all strategies"""
-    signals = get_current_signals()
+    """TradingView-style trading signals dashboard with chart on left and signals panel on right"""
+    from tradingview_dashboard import display_tradingview_style_dashboard
+    display_tradingview_style_dashboard()
     trading_style = st.session_state.trading_style.title()
     market_type = st.session_state.market_type.title()
     
