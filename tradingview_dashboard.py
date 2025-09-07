@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+import time
 
 def display_tradingview_style_dashboard():
     """TradingView-style trading signals dashboard with chart on left and signals panel on right"""
@@ -27,6 +28,21 @@ def display_tradingview_style_dashboard():
     if not signals:
         st.info("⏳ Loading real-time market data and generating signals...")
         return
+    
+    # Auto-refresh functionality with 1-minute updates like TradingView
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = time.time()
+    
+    current_time = time.time()
+    if current_time - st.session_state.last_refresh >= 60:  # 1-minute refresh
+        st.session_state.last_refresh = current_time
+        st.rerun()
+    
+    # Add auto-refresh indicator
+    refresh_placeholder = st.container()
+    with refresh_placeholder:
+        time_since_refresh = int((current_time - st.session_state.last_refresh))
+        st.caption(f"🔄 Auto-refresh: {60-time_since_refresh}s remaining | Last update: {datetime.fromtimestamp(st.session_state.last_refresh).strftime('%H:%M:%S')}")
     
     # TradingView-style layout: Chart (Left) + Signal Panel (Right)
     chart_col, signal_col = st.columns([0.7, 0.3])  # 70% chart, 30% signals
