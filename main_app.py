@@ -927,7 +927,7 @@ def display_smc_ict_signals():
     
     # Filter to only SMC/ICT signals
     if signals:
-        smc_ict_signals = [s for s in signals if s.get('strategy', '').startswith(('ICT', 'SMC'))]
+        smc_ict_signals = [s for s in signals if s.get('strategy', '').startswith(('ICT', 'SMC', 'Smart Money Concepts'))]
     else:
         smc_ict_signals = []
     
