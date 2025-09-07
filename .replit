@@ -1,4 +1,4 @@
-modules = ["python-3.11", "web"]
+modules = ["python-3.11", "web", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -29,7 +29,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run main_app.py --server.port 5000 --server.address 0.0.0.0"
+args = "streamlit run main_app.py --server.port=5000 --server.address=0.0.0.0"
 waitForPort = 5000
 
 [[ports]]
