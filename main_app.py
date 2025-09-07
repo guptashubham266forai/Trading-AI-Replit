@@ -2361,30 +2361,18 @@ def main():
         min_rr=min_rr
     )
     
-    # Main content tabs
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "📊 Market Overview", 
-        "🎯 Trading Signals", 
-        "🚀 Advanced Signals",
-        "🏛️ SMC/ICT Signals",
-        "🔮 Predictions", 
+    # Main content tabs with unified signals dashboard
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Professional Trading Signals", 
+        "🔮 Market Predictions", 
         "📈 Detailed Analysis",
-        "📊 Performance"
+        "📊 Performance Analytics"
     ])
     
     with tab1:
-        display_market_overview()
-    
-    with tab2:
-        display_trading_signals()
-    
-    with tab3:
-        display_advanced_signals()
-    
-    with tab4:
-        display_smc_ict_signals()
+        display_unified_trading_dashboard()
 
-    with tab5:
+    with tab2:
         # Predictions tab with improved functionality
         st.header("🔮 Market Predictions")
         
@@ -2525,7 +2513,7 @@ def main():
         else:
             st.info("Loading market data for predictions...")
     
-    with tab6:
+    with tab3:
         st.subheader("Individual Instrument Analysis")
         
         current_data = get_current_market_data()
@@ -2585,7 +2573,7 @@ def main():
         else:
             st.info("No data available. Please wait for data to load.")
     
-    with tab7:
+    with tab4:
         # Performance Analysis Tab
         if not st.session_state.get('db_connected', False):
             st.warning("📊 Performance tracking requires database connection.")
