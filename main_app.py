@@ -918,9 +918,9 @@ def display_chart_area():
 
 
 def display_unified_trading_dashboard():
-    """TradingView-style trading signals dashboard with chart on left and signals panel on right"""
-    from tradingview_dashboard import display_tradingview_style_dashboard
-    display_tradingview_style_dashboard()
+    """Enhanced TradingView-style dashboard with real-time updates, signal zones, and sleek table"""
+    from enhanced_tradingview_dashboard import display_enhanced_tradingview_dashboard
+    display_enhanced_tradingview_dashboard()
 
 def display_smc_ict_signals():
     """Display SMC/ICT professional institutional trading signals"""
