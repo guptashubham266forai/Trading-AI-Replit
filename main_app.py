@@ -916,6 +916,184 @@ def display_chart_area():
         
         st.write("---")
 
+def display_smc_ict_signals():
+    """Display SMC/ICT professional institutional trading signals"""
+    signals = get_current_signals()
+    trading_style = st.session_state.trading_style.title()
+    market_type = st.session_state.market_type.title()
+    
+    st.header(f"🏛️ SMC/ICT Professional {trading_style} {market_type} Signals")
+    st.info("🎓 Smart Money Concepts & ICT strategies: Order Blocks, Fair Value Gaps, Liquidity Sweeps")
+    
+    # Filter to only SMC/ICT signals
+    if signals:
+        smc_ict_signals = [s for s in signals if s.get('strategy', '').startswith(('ICT', 'SMC'))]
+    else:
+        smc_ict_signals = []
+    
+    # Add confidence filter controls
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        if 'smc_confidence_filter_value' not in st.session_state:
+            st.session_state.smc_confidence_filter_value = 90  # High default for ICT
+            
+        confidence_filter = st.slider(
+            "Minimum Confidence Level (%)",
+            min_value=0,
+            max_value=100,
+            value=st.session_state.smc_confidence_filter_value,
+            step=5,
+            help="Filter SMC/ICT signals by minimum confidence level",
+            key="smc_ict_signals_confidence_filter"
+        )
+        
+        if confidence_filter != st.session_state.smc_confidence_filter_value:
+            st.session_state.smc_confidence_filter_value = confidence_filter
+    
+    with col2:
+        show_count = st.selectbox(
+            "Show Count",
+            options=[3, 6, 9, 12],
+            index=1,
+            help="Number of SMC/ICT signals to display",
+            key="smc_ict_signals_show_count"
+        )
+    
+    with col3:
+        sort_option = st.selectbox(
+            "Sort By",
+            options=["Confidence", "Time", "Risk:Reward"],
+            index=0,
+            help="Sort SMC/ICT signals by selected criteria",
+            key="smc_ict_signals_sort_option"
+        )
+    
+    if not smc_ict_signals:
+        st.info("No SMC/ICT signals at the moment. These institutional strategies require specific market structure conditions.")
+        
+        # Show what SMC/ICT strategies look for
+        st.subheader("🎯 SMC/ICT Strategy Overview")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.write("**🏛️ Order Blocks**")
+            st.write("• Institutional supply/demand zones")
+            st.write("• Last opposing candle before structure break")
+            st.write("• High probability reversal areas")
+            
+        with col2:
+            st.write("**📊 Fair Value Gaps (FVG)**")
+            st.write("• Market imbalance areas")
+            st.write("• Price inefficiencies")
+            st.write("• Retest entry opportunities")
+            
+        with col3:
+            st.write("**🔄 Liquidity Sweeps**")
+            st.write("• Stop hunt patterns")
+            st.write("• Fake breakouts then reversals")
+            st.write("• High risk:reward setups")
+        
+        return
+    
+    # Filter signals by time and confidence
+    current_time = datetime.now()
+    time_filter = 14400 if st.session_state.trading_style == 'swing' else 7200  # 4 hours for swing, 2 hours for intraday
+    confidence_threshold = confidence_filter / 100.0
+    
+    filtered_signals = []
+    for signal in smc_ict_signals:
+        try:
+            # Time filter
+            signal_time = signal['timestamp']
+            if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                signal_time = signal_time.replace(tzinfo=None)
+            
+            time_diff = (current_time - signal_time).total_seconds()
+            time_valid = time_diff < time_filter
+            
+            # Confidence filter
+            confidence_valid = signal.get('confidence', 0) >= confidence_threshold
+            
+            if time_valid and confidence_valid:
+                filtered_signals.append(signal)
+        except Exception:
+            if signal.get('confidence', 0) >= confidence_threshold:
+                filtered_signals.append(signal)
+    
+    # Sort signals
+    if sort_option == "Confidence":
+        filtered_signals.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+    elif sort_option == "Time":
+        def get_timestamp_for_sorting(signal):
+            ts = signal.get('timestamp', datetime.now())
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+            return ts
+        filtered_signals.sort(key=get_timestamp_for_sorting, reverse=True)
+    elif sort_option == "Risk:Reward":
+        filtered_signals.sort(key=lambda x: x.get('risk_reward', 0), reverse=True)
+    
+    if not filtered_signals:
+        st.info(f"No recent SMC/ICT signals found with minimum {confidence_filter}% confidence.")
+        return
+    
+    # Show signal statistics
+    avg_confidence = sum(s.get('confidence', 0) for s in filtered_signals) / len(filtered_signals)
+    avg_risk_reward = sum(s.get('risk_reward', 0) for s in filtered_signals) / len(filtered_signals)
+    
+    st.success(f"🎯 {len(filtered_signals)} Professional SMC/ICT Signals | Avg Confidence: {avg_confidence:.1%} | Avg R:R: {avg_risk_reward:.1f}:1")
+    
+    # Limit to show_count
+    recent_signals = filtered_signals[:show_count]
+    
+    # Display SMC/ICT signals table
+    for i, signal in enumerate(recent_signals):
+        with st.expander(f"🏛️ {signal['symbol']} {signal['action']} - {signal['strategy']} ({signal.get('confidence', 0):.0%})", expanded=i < 3):
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Entry Price", f"${signal['price']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['price']:.2f}")
+                st.metric("Stop Loss", f"${signal['stop_loss']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['stop_loss']:.2f}")
+            
+            with col2:
+                st.metric("Target", f"${signal['target']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['target']:.2f}")
+                st.metric("Risk:Reward", f"{signal.get('risk_reward', 0):.1f}:1")
+            
+            with col3:
+                st.metric("Confidence", f"{signal.get('confidence', 0):.0%}")
+                
+                # Get time ago
+                signal_time = signal['timestamp']
+                if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                    signal_time = signal_time.replace(tzinfo=None)
+                
+                time_diff = datetime.now() - signal_time
+                hours = int(time_diff.total_seconds() // 3600)
+                minutes = int((time_diff.total_seconds() % 3600) // 60)
+                time_ago = f"{hours}h {minutes}m ago" if hours > 0 else f"{minutes}m ago"
+                
+                st.metric("Time", time_ago)
+            
+            with col4:
+                # Risk calculation
+                risk_amount = abs(signal['price'] - signal['stop_loss'])
+                reward_amount = abs(signal['target'] - signal['price'])
+                risk_percent = (risk_amount / signal['price']) * 100
+                reward_percent = (reward_amount / signal['price']) * 100
+                
+                st.metric("Risk %", f"{risk_percent:.1f}%")
+                st.metric("Reward %", f"{reward_percent:.1f}%")
+            
+            # Signal notes
+            if signal.get('notes'):
+                st.info(f"📝 **Analysis:** {signal['notes']}")
+            
+            # Chart button
+            if st.button(f"📊 View Chart", key=f"smc_chart_{signal['symbol']}_{i}"):
+                st.session_state.selected_signal = signal
+
 def display_advanced_signals():
     """Display advanced trading signals with same filtering and display as trading signals"""
     signals = get_current_signals()
@@ -1930,10 +2108,11 @@ def main():
     )
     
     # Main content tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Market Overview", 
         "🎯 Trading Signals", 
         "🚀 Advanced Signals",
+        "🏛️ SMC/ICT Signals",
         "🔮 Predictions", 
         "📈 Detailed Analysis",
         "📊 Performance"
@@ -1947,8 +2126,11 @@ def main():
     
     with tab3:
         display_advanced_signals()
-
+    
     with tab4:
+        display_smc_ict_signals()
+
+    with tab5:
         # Predictions tab with improved functionality
         st.header("🔮 Market Predictions")
         
@@ -2089,7 +2271,7 @@ def main():
         else:
             st.info("Loading market data for predictions...")
     
-    with tab5:
+    with tab6:
         st.subheader("Individual Instrument Analysis")
         
         current_data = get_current_market_data()
@@ -2149,7 +2331,7 @@ def main():
         else:
             st.info("No data available. Please wait for data to load.")
     
-    with tab5:
+    with tab7:
         # Performance Analysis Tab
         if not st.session_state.get('db_connected', False):
             st.warning("📊 Performance tracking requires database connection.")
