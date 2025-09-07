@@ -916,6 +916,260 @@ def display_chart_area():
         
         st.write("---")
 
+def display_unified_trading_dashboard():
+    """Professional unified trading signals dashboard with all strategies"""
+    signals = get_current_signals()
+    trading_style = st.session_state.trading_style.title()
+    market_type = st.session_state.market_type.title()
+    
+    # Header with professional styling
+    st.markdown("""
+    <div style='background: linear-gradient(90deg, #1f4037 0%, #99f2c8 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
+        <h1 style='color: white; margin: 0; text-align: center;'>
+            📊 Professional Trading Signals Dashboard
+        </h1>
+        <p style='color: white; margin: 5px 0 0 0; text-align: center; opacity: 0.9;'>
+            Real-Time {trading_style} {market_type} Trading Signals | All Strategies
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if not signals:
+        st.info("⏳ Loading real-time market data and generating signals...")
+        return
+    
+    # Professional control panel
+    st.subheader("🎛️ Signal Filters & Controls")
+    
+    col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+    
+    with col1:
+        # Get all unique strategies
+        all_strategies = sorted(list(set([s.get('strategy', 'Unknown') for s in signals])))
+        all_strategies.insert(0, "All Strategies")
+        
+        strategy_filter = st.selectbox(
+            "Filter by Strategy",
+            options=all_strategies,
+            index=0,
+            help="Filter signals by specific trading strategy",
+            key="unified_strategy_filter"
+        )
+    
+    with col2:
+        confidence_filter = st.slider(
+            "Min Confidence (%)",
+            min_value=0,
+            max_value=100,
+            value=70,
+            step=5,
+            help="Minimum confidence level for signals",
+            key="unified_confidence_filter"
+        )
+    
+    with col3:
+        show_count = st.selectbox(
+            "Show Count",
+            options=[10, 20, 30, 50],
+            index=1,
+            help="Number of signals to display",
+            key="unified_show_count"
+        )
+    
+    with col4:
+        sort_option = st.selectbox(
+            "Sort By",
+            options=["Confidence", "Time", "Risk:Reward", "Strategy"],
+            index=0,
+            help="Sort signals by selected criteria",
+            key="unified_sort_option"
+        )
+    
+    # Filter signals by time and confidence
+    current_time = datetime.now()
+    time_filter = 14400 if st.session_state.trading_style == 'swing' else 7200  # 4 hours for swing, 2 hours for intraday
+    confidence_threshold = confidence_filter / 100.0
+    
+    filtered_signals = []
+    for signal in signals:
+        try:
+            # Time filter
+            signal_time = signal['timestamp']
+            if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                signal_time = signal_time.replace(tzinfo=None)
+            
+            time_diff = (current_time - signal_time).total_seconds()
+            time_valid = time_diff < time_filter
+            
+            # Confidence filter
+            confidence_valid = signal.get('confidence', 0) >= confidence_threshold
+            
+            # Strategy filter
+            strategy_valid = (strategy_filter == "All Strategies" or 
+                            signal.get('strategy', '') == strategy_filter)
+            
+            if time_valid and confidence_valid and strategy_valid:
+                filtered_signals.append(signal)
+        except Exception:
+            if signal.get('confidence', 0) >= confidence_threshold:
+                if strategy_filter == "All Strategies" or signal.get('strategy', '') == strategy_filter:
+                    filtered_signals.append(signal)
+    
+    # Sort signals
+    if sort_option == "Confidence":
+        filtered_signals.sort(key=lambda x: x.get('confidence', 0), reverse=True)
+    elif sort_option == "Time":
+        def get_timestamp_for_sorting(signal):
+            ts = signal.get('timestamp', datetime.now())
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+            return ts
+        filtered_signals.sort(key=get_timestamp_for_sorting, reverse=True)
+    elif sort_option == "Risk:Reward":
+        filtered_signals.sort(key=lambda x: x.get('risk_reward', 0), reverse=True)
+    elif sort_option == "Strategy":
+        filtered_signals.sort(key=lambda x: x.get('strategy', ''))
+    
+    # Display signal statistics
+    if filtered_signals:
+        avg_confidence = sum(s.get('confidence', 0) for s in filtered_signals) / len(filtered_signals)
+        avg_risk_reward = sum(s.get('risk_reward', 0) for s in filtered_signals) / len(filtered_signals)
+        
+        # Get strategy distribution
+        strategy_counts = {}
+        for signal in filtered_signals:
+            strategy = signal.get('strategy', 'Unknown')
+            strategy_counts[strategy] = strategy_counts.get(strategy, 0) + 1
+        
+        # Statistics row
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Active Signals", len(filtered_signals), delta=f"of {len(signals)} total")
+        
+        with col2:
+            st.metric("Avg Confidence", f"{avg_confidence:.1%}", delta="Professional Grade")
+        
+        with col3:
+            st.metric("Avg Risk:Reward", f"{avg_risk_reward:.1f}:1", delta="Optimized")
+        
+        with col4:
+            most_active_strategy = max(strategy_counts.items(), key=lambda x: x[1])
+            st.metric("Top Strategy", most_active_strategy[0][:15], delta=f"{most_active_strategy[1]} signals")
+        
+        st.markdown("---")
+        
+        # Limit to show_count
+        display_signals = filtered_signals[:show_count]
+        
+        # Professional signal cards
+        st.subheader(f"🎯 Active Trading Signals ({len(display_signals)} shown)")
+        
+        for i, signal in enumerate(display_signals):
+            # Get strategy category and color
+            strategy = signal.get('strategy', 'Unknown')
+            if strategy.startswith(('ICT', 'SMC', 'Smart Money')):
+                strategy_color = "#FF6B6B"  # Red for institutional
+                strategy_badge = "🏛️ INSTITUTIONAL"
+            elif strategy in ['Volume Price Analysis', 'Momentum Divergence']:
+                strategy_color = "#4ECDC4"  # Teal for advanced
+                strategy_badge = "🚀 ADVANCED"
+            else:
+                strategy_color = "#45B7D1"  # Blue for standard
+                strategy_badge = "📊 STANDARD"
+            
+            # Professional signal card
+            with st.container():
+                st.markdown(f"""
+                <div style='
+                    background: white;
+                    border-left: 5px solid {strategy_color};
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                '>
+                    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
+                        <h4 style='margin: 0; color: #333;'>{signal['symbol']} {signal['action']}</h4>
+                        <span style='background: {strategy_color}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;'>
+                            {strategy_badge}
+                        </span>
+                    </div>
+                    <p style='margin: 5px 0; color: #666; font-weight: 500;'>Strategy: {strategy}</p>
+                    <p style='margin: 5px 0; color: #666;'>Confidence: {signal.get('confidence', 0):.0%} | Risk:Reward: {signal.get('risk_reward', 0):.1f}:1</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Signal details in columns
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    price_format = f"${signal['price']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['price']:.2f}"
+                    stop_format = f"${signal['stop_loss']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['stop_loss']:.2f}"
+                    st.metric("Entry Price", price_format)
+                    st.metric("Stop Loss", stop_format)
+                
+                with col2:
+                    target_format = f"${signal['target']:.4f}" if st.session_state.market_type == 'crypto' else f"₹{signal['target']:.2f}"
+                    st.metric("Target", target_format)
+                    st.metric("Risk:Reward", f"{signal.get('risk_reward', 0):.1f}:1")
+                
+                with col3:
+                    st.metric("Confidence", f"{signal.get('confidence', 0):.0%}")
+                    
+                    # Get time ago
+                    signal_time = signal['timestamp']
+                    if hasattr(signal_time, 'tzinfo') and signal_time.tzinfo is not None:
+                        signal_time = signal_time.replace(tzinfo=None)
+                    
+                    time_diff = datetime.now() - signal_time
+                    hours = int(time_diff.total_seconds() // 3600)
+                    minutes = int((time_diff.total_seconds() % 3600) // 60)
+                    time_ago = f"{hours}h {minutes}m ago" if hours > 0 else f"{minutes}m ago"
+                    
+                    st.metric("Time", time_ago)
+                
+                with col4:
+                    # Risk calculation
+                    risk_amount = abs(signal['price'] - signal['stop_loss'])
+                    reward_amount = abs(signal['target'] - signal['price'])
+                    risk_percent = (risk_amount / signal['price']) * 100
+                    reward_percent = (reward_amount / signal['price']) * 100
+                    
+                    st.metric("Risk %", f"{risk_percent:.1f}%")
+                    st.metric("Reward %", f"{reward_percent:.1f}%")
+                
+                # Signal notes
+                if signal.get('notes'):
+                    st.info(f"📝 **Analysis:** {signal['notes']}")
+                
+                # Action buttons
+                col1, col2, col3 = st.columns([2, 2, 1])
+                
+                with col1:
+                    if st.button(f"📊 View Chart", key=f"chart_{signal['symbol']}_{i}"):
+                        st.session_state.selected_signal = signal
+                
+                with col2:
+                    if st.button(f"🔔 Set Alert", key=f"alert_{signal['symbol']}_{i}"):
+                        st.success(f"Alert set for {signal['symbol']} {signal['action']} signal!")
+                
+                with col3:
+                    if st.button(f"📋 Copy", key=f"copy_{signal['symbol']}_{i}"):
+                        st.info("Signal details copied!")
+        
+    else:
+        st.warning(f"No signals found matching your criteria.")
+        st.info(f"**Current filters:** Strategy: {strategy_filter}, Confidence: {confidence_filter}%+")
+        
+        # Show available strategies
+        if signals:
+            available_strategies = sorted(list(set([s.get('strategy', 'Unknown') for s in signals])))
+            st.write("**Available strategies in current data:**")
+            for strategy in available_strategies:
+                count = sum(1 for s in signals if s.get('strategy', '') == strategy)
+                st.write(f"• {strategy}: {count} signals")
+
 def display_smc_ict_signals():
     """Display SMC/ICT professional institutional trading signals"""
     signals = get_current_signals()
